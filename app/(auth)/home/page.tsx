@@ -22,7 +22,7 @@ export default function HomePage() {
         </p>
 
         {/* Buttons */}
-        <div className="space-y-6">
+        <div className="space-y-8">
 
           <Link href="/login">
             <button className="w-full h-14 rounded-full bg-gradient-to-r from-blue-600 to-cyan-600 text-white text-lg font-semibold hover:opacity-90 transition shadow-lg">
