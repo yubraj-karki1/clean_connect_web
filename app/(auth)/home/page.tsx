@@ -17,7 +17,7 @@ export default function HomePage() {
         </h1>
 
         {/* Subtitle */}
-        <p className="text-gray-600 mb-12 leading-relaxed text-base max-w-sm mx-auto">
+         <p className="text-gray-600 mb-12 leading-relaxed text-lg max-w-sm mx-auto">
           Trusted home cleaning for a healthier, happier space.
         </p>
 
