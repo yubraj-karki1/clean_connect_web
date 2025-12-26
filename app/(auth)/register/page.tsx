@@ -36,12 +36,7 @@ export default function RegisterPage() {
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-cyan-50 to-teal-100 px-4">
       <div className="w-full max-w-md bg-white/90 backdrop-blur-md rounded-3xl shadow-xl p-8">
 
-        {/* Logo */}
-        <div className="flex justify-center mb-6">
-          <div className="h-16 w-16 bg-gradient-to-br from-blue-400 to-teal-400 rounded-full flex items-center justify-center shadow-md">
-            <span className="text-white font-bold text-xl">LOGO</span>
-          </div>
-        </div>
+        
 
         {/* Title */}
         <h1 className="text-3xl font-bold text-center text-blue-700 mb-2">
