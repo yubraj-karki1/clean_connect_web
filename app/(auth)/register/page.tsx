@@ -36,10 +36,7 @@ export default function RegisterPage() {
     <div className="relative min-h-screen flex items-center justify-center overflow-hidden bg-gradient-to-br from-cyan-100 via-sky-100 to-teal-200 px-4">
 
       {/* Background Blobs */}
-      <div className="absolute -top-40 -left-40 w-[500px] h-[500px] bg-blue-300 rounded-full blur-3xl opacity-30" />
-      <div className="absolute top-1/3 -right-40 w-[500px] h-[500px] bg-teal-300 rounded-full blur-3xl opacity-30" />
-      <div className="absolute -bottom-40 left-1/4 w-[500px] h-[500px] bg-cyan-300 rounded-full blur-3xl opacity-30" />
-
+        <div className="absolute -top-40 -left-40 w-[500px] h-[500px] bg-black rounded-full blur-3xl opacity-30" />
 
       {/* Form Card */}
       <div className="relative w-full max-w-md bg-white/80 backdrop-blur-md rounded-3xl shadow-2xl p-8 z-10">
