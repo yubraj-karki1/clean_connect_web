@@ -13,7 +13,7 @@ export default function HomePage() {
 
         {/* Title */}
         <h1 className="text-5xl font-extrabold text-blue-700 mb-4 tracking-tight">
-          Clean  Connect
+          Clean Connect
         </h1>
 
         {/* Subtitle */}
@@ -22,21 +22,22 @@ export default function HomePage() {
         </p>
 
         {/* Buttons */}
-        <div className="space-y-12">
+        <div className="flex gap-6">
           
-          <Link href="/login">
+          <Link href="/login" className="w-1/2">
             <button className="w-full h-14 rounded-full bg-gradient-to-r from-blue-600 to-cyan-600 text-white text-lg font-semibold hover:opacity-90 transition shadow-lg">
               Login
             </button>
           </Link>
-            <div className="space-y-18">
-          <Link href="/register">
+
+          <Link href="/register" className="w-1/2">
             <button className="w-full h-14 rounded-full border-2 border-blue-600 text-blue-600 text-lg font-semibold hover:bg-blue-50 transition shadow-sm">
               Create Account
             </button>
           </Link>
-          </div>
+
         </div>
+
       </div>
     </div>
   );
