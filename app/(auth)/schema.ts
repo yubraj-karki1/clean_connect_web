@@ -2,18 +2,17 @@ import z from "zod";
 
 export const loginSchema = z.object({
     email: z.email({ message: "Enter a valid email"}),
-    password: z.string().min(6,{message:"Minimun 6 characters"}),
+    password: z.string().min(6,{message:"Enter a password"}),
 });
 
 export type LoginData = z.infer<typeof loginSchema>;
 
 export const registerSchema = z.object({
-    firstname: z.string().min(2, { message: "Minimum 2 characters" }),
-    lastname: z.string().min(2, { message: "Minimum 2 characters" }),
+    fullName: z.string().min(2, { message: "Enter a password" }),
     email: z.email({ message: "Enter a valid email" }),
-    username: z.string().min(3, { message: "Minimum 3 characters" }),
-    password: z.string().min(6, { message: "Minimum 6 characters" }),
-    confirmPassword: z.string().min(6, { message: "Minimum 6 characters" }),
+    address: z.string().min(5, { message: "Enter a address" }),
+    password: z.string().min(6, { message: "Enter a password " }),
+    confirmPassword: z.string().min(6, { message: "Enter a password" }),
 }).refine((v) => v.password === v.confirmPassword, {
         path: ["confirmPassword"],
         message: "Passwords do not match",
