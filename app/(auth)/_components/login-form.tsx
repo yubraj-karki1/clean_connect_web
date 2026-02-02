@@ -7,10 +7,9 @@ import {
   EyeOff,
   ArrowLeft,
   Loader2,
-  CheckCircle,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useState, useTransition } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import Link from "next/link";
@@ -23,7 +22,8 @@ export default function LoginPage() {
 
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
+
+  const [pending, startTransition] = useTransition();
 
   const {
     register,
@@ -34,40 +34,50 @@ export default function LoginPage() {
     mode: "onSubmit",
   });
 
-  const onSubmit = async (values: LoginData) => {
-    setError(null);
-    setSuccess(null);
+  const [loading, setLoading] = useState(false);
 
-    try {
-      const response = await handleLogin(values);
+const onSubmit = async (values: LoginData) => {
+  setError(null);
+  setLoading(true);
 
-      if (!response.success) {
-        throw new Error(response.message || "Invalid email or password");
-      }
+  try {
+    // ✅ safety timeout so UI never stuck forever
+    const timeoutMs = 15000;
 
-      // ✅ Success
-      setSuccess("Welcome back!");
+    const response = await Promise.race([
+      handleLogin(values),
+      new Promise((_, reject) =>
+        setTimeout(() => reject(new Error("Login timeout. Is backend running?")), timeoutMs)
+      ),
+    ]) as any;
 
-      // ⏳ Redirect after delay
-      setTimeout(() => {
-        router.push("/dashboard");
-      }, 1500);
-
-    } catch (err: any) {
-      setError(err.message || "Login failed");
+    if (!response?.success) {
+      throw new Error(response?.message || "Invalid email or password");
     }
-  };
+
+    sessionStorage.setItem("flash_success", "Welcome back!");
+    if (response?.data?.name) {
+      sessionStorage.setItem("flash_name", String(response.data.name));
+    }
+
+    // ✅ go to the correct route
+    router.replace("/dashboard");
+    router.refresh();
+  } catch (err: any) {
+    setError(err?.message || "Login failed");
+  } finally {
+    setLoading(false);
+  }
+};
 
   return (
     <div className="relative min-h-screen flex items-center justify-center px-4 overflow-hidden bg-black text-white">
-
       {/* Background Effects */}
       <div className="absolute -top-40 -left-40 w-[500px] h-[500px] bg-gray-800 rounded-full blur-3xl opacity-40 animate-pulse" />
       <div className="absolute top-1/3 -right-40 w-[500px] h-[500px] bg-gray-900 rounded-full blur-3xl opacity-30 animate-pulse" />
 
       {/* Login Card */}
       <div className="relative w-full max-w-lg bg-white/10 backdrop-blur-md rounded-3xl shadow-2xl p-10 z-10 border border-white/10">
-
         {/* Back */}
         <Link
           href="/home"
@@ -94,16 +104,7 @@ export default function LoginPage() {
           </div>
         )}
 
-        {/* Success */}
-        {success && (
-          <div className="mb-5 p-3 rounded-lg bg-green-500/10 border border-green-500/50 text-green-500 text-sm text-center flex items-center justify-center gap-2">
-            <CheckCircle size={18} />
-            {success}
-          </div>
-        )}
-
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-
           {/* Email */}
           <div>
             <label className="block text-sm font-medium text-gray-300 mb-2">
@@ -150,8 +151,9 @@ export default function LoginPage() {
               />
               <button
                 type="button"
-                onClick={() => setShowPassword(!showPassword)}
+                onClick={() => setShowPassword((s) => !s)}
                 className="ml-2 text-gray-400 hover:text-gray-200"
+                aria-label="Toggle password visibility"
               >
                 {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
               </button>
@@ -176,10 +178,10 @@ export default function LoginPage() {
           {/* Submit */}
           <button
             type="submit"
-            disabled={isSubmitting}
+            disabled={loading}
             className="flex items-center justify-center gap-2 w-full bg-gradient-to-r from-teal-500 to-blue-500 text-white py-4 rounded-xl text-lg font-semibold disabled:opacity-60"
           >
-            {isSubmitting ? (
+            {loading ? (
               <>
                 <Loader2 className="animate-spin" size={20} />
                 Signing In...

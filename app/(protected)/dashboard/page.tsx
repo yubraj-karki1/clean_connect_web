@@ -1,7 +1,7 @@
 "use client";
 
-import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 import {
   Home,
   Calendar,
@@ -10,6 +10,7 @@ import {
   Gift,
   Search,
   SlidersHorizontal,
+  CheckCircle,
 } from "lucide-react";
 
 const services = [
@@ -60,8 +61,26 @@ const featuredCleaners = [
   },
 ];
 
-export default function HomePage() {
+export default function DashboardPage() {
   const router = useRouter();
+
+  const [flash, setFlash] = useState<string | null>(null);
+  const [name, setName] = useState("Guest");
+
+  useEffect(() => {
+    const msg = sessionStorage.getItem("flash_success");
+    if (msg) {
+      setFlash(msg);
+      sessionStorage.removeItem("flash_success");
+      const t = setTimeout(() => setFlash(null), 2000);
+      return () => clearTimeout(t);
+    }
+  }, []);
+
+  useEffect(() => {
+    const n = sessionStorage.getItem("flash_name");
+    if (n) setName(n);
+  }, []);
 
   return (
     <main className="min-h-screen w-full bg-gray-50 text-gray-900">
@@ -70,7 +89,7 @@ export default function HomePage() {
         <div className="w-full px-6 py-4 flex items-center justify-between">
           {/* Logo */}
           <div
-            onClick={() => router.push("/")}
+            onClick={() => router.push("/user/dashboard")}
             className="flex items-center gap-3 cursor-pointer"
           >
             <div className="h-10 w-10 rounded-xl bg-emerald-100 flex items-center justify-center">
@@ -83,7 +102,7 @@ export default function HomePage() {
           <nav className="hidden md:flex items-center gap-2 text-sm">
             <button
               type="button"
-              onClick={() => router.push("/")}
+              onClick={() => router.push("/dashboard")}
               className="flex items-center gap-2 px-4 py-2 rounded-full bg-emerald-50 text-emerald-700 font-semibold"
             >
               <Home size={16} /> Home
@@ -107,7 +126,7 @@ export default function HomePage() {
 
             <button
               type="button"
-              onClick={() => router.push("/user/profile")}
+              onClick={() => router.push("/profile")}
               className="flex items-center gap-2 px-4 py-2 rounded-full hover:bg-gray-100 text-gray-600"
             >
               <User size={16} /> Profile
@@ -118,10 +137,10 @@ export default function HomePage() {
           <div className="flex items-center gap-3">
             <button
               type="button"
-              onClick={() => router.push("/login")}
+              onClick={() => router.push("/profile")}
               className="rounded-full bg-white px-5 py-2 text-sm font-semibold text-gray-700 border hover:bg-gray-50"
             >
-              Sign In
+              Profile
             </button>
 
             <button
@@ -135,20 +154,28 @@ export default function HomePage() {
         </div>
       </header>
 
-      {/* Hero FULL WIDTH */}
+      {/* Flash message */}
+      <section className="w-full px-6 pt-6">
+        {flash && (
+          <div className="rounded-2xl border border-green-500/30 bg-green-50 px-4 py-3 text-green-700 flex items-center gap-2">
+            <CheckCircle size={18} />
+            <span className="text-sm font-semibold">{flash}</span>
+          </div>
+        )}
+      </section>
+
+      {/* Hero */}
       <section className="w-full px-6 pt-6">
         <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-emerald-500 to-teal-400 text-white">
           <div className="p-10 md:p-12 grid grid-cols-1 md:grid-cols-2 gap-10 items-center">
-            {/* Left */}
             <div>
               <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight">
-                Hello, Guest <span className="ml-2">👋</span>
+                Hello, {name} 
               </h1>
               <p className="mt-3 text-white/90 text-base md:text-lg">
                 Find your perfect cleaning service
               </p>
 
-              {/* Offer */}
               <div className="mt-6 flex items-center gap-4 rounded-2xl bg-white/15 px-5 py-4 max-w-xl">
                 <div className="h-12 w-12 rounded-2xl bg-white/20 flex items-center justify-center">
                   <Gift size={22} />
@@ -161,7 +188,6 @@ export default function HomePage() {
                 </div>
               </div>
 
-              {/* Search + Filters */}
               <div className="mt-6 flex flex-col sm:flex-row gap-3 max-w-xl">
                 <div className="flex items-center gap-2 bg-white rounded-2xl px-4 py-3 text-gray-700 w-full">
                   <Search size={18} className="text-gray-400" />
@@ -181,7 +207,6 @@ export default function HomePage() {
               </div>
             </div>
 
-            {/* Right Decorative Tiles */}
             <div className="hidden md:flex justify-end">
               <div className="grid grid-cols-2 gap-6">
                 <div className="h-28 w-36 rounded-3xl bg-white/20 backdrop-blur-sm" />
@@ -196,7 +221,6 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Services FULL WIDTH */}
       <section className="w-full px-6 py-10">
         <div className="flex items-center justify-between">
           <h2 className="text-2xl font-bold">Services</h2>
@@ -228,7 +252,6 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Featured Cleaners FULL WIDTH */}
       <section className="w-full px-6 pb-14">
         <div className="flex items-center justify-between">
           <h2 className="text-2xl font-bold">Featured Cleaners</h2>
@@ -250,7 +273,6 @@ export default function HomePage() {
               className="text-left bg-white rounded-2xl border shadow-sm hover:shadow-md transition overflow-hidden"
             >
               <div className="relative h-48 w-full">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={c.image}
                   alt={c.name}
@@ -281,95 +303,9 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Footer FULL WIDTH */}
+      {/* Footer */}
       <footer className="bg-white border-t">
         <div className="w-full px-6 py-12">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-10">
-            <div>
-              <div className="flex items-center gap-3">
-                <div className="h-10 w-10 rounded-xl bg-emerald-100 flex items-center justify-center">
-                  <div className="h-5 w-5 rounded-md bg-emerald-500" />
-                </div>
-                <span className="text-xl font-bold">CleanConnect</span>
-              </div>
-
-              <p className="mt-4 text-sm text-gray-600 max-w-xs">
-                Your trusted partner for professional cleaning services.
-              </p>
-            </div>
-
-            <div>
-              <h4 className="font-semibold text-gray-900">Services</h4>
-              <ul className="mt-4 space-y-2 text-sm text-gray-600">
-                {["Home Cleaning", "Office Cleaning", "Deep Cleaning", "Move-in/out"].map(
-                  (item) => (
-                    <li key={item}>
-                      <button
-                        type="button"
-                        onClick={() => router.push("/booking")}
-                        className="hover:text-emerald-600"
-                      >
-                        {item}
-                      </button>
-                    </li>
-                  )
-                )}
-              </ul>
-            </div>
-
-            <div>
-              <h4 className="font-semibold text-gray-900">Company</h4>
-              <ul className="mt-4 space-y-2 text-sm text-gray-600">
-                <li>
-                  <Link href="/about" className="hover:text-emerald-600">
-                    About Us
-                  </Link>
-                </li>
-                <li>
-                  <Link href="/careers" className="hover:text-emerald-600">
-                    Careers
-                  </Link>
-                </li>
-                <li>
-                  <Link href="/blog" className="hover:text-emerald-600">
-                    Blog
-                  </Link>
-                </li>
-                <li>
-                  <Link href="/contact" className="hover:text-emerald-600">
-                    Contact
-                  </Link>
-                </li>
-              </ul>
-            </div>
-
-            <div>
-              <h4 className="font-semibold text-gray-900">Support</h4>
-              <ul className="mt-4 space-y-2 text-sm text-gray-600">
-                <li>
-                  <Link href="/help" className="hover:text-emerald-600">
-                    Help Center
-                  </Link>
-                </li>
-                <li>
-                  <Link href="/privacy" className="hover:text-emerald-600">
-                    Privacy Policy
-                  </Link>
-                </li>
-                <li>
-                  <Link href="/terms" className="hover:text-emerald-600">
-                    Terms of Service
-                  </Link>
-                </li>
-                <li>
-                  <Link href="/faqs" className="hover:text-emerald-600">
-                    FAQs
-                  </Link>
-                </li>
-              </ul>
-            </div>
-          </div>
-
           <div className="mt-10 border-t pt-6 text-center text-sm text-gray-500">
             © 2024 CleanConnect. All rights reserved.
           </div>
