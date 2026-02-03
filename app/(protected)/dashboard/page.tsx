@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import Image from "next/image";
 import {
   Home,
   Calendar,
@@ -11,7 +12,7 @@ import {
   Search,
   SlidersHorizontal,
   CheckCircle,
-} from "lucide-react";
+} from "lucide-react";  
 
 const services = [
   { title: "Home Cleaning", emoji: "🏠" },
@@ -89,14 +90,21 @@ export default function DashboardPage() {
         <div className="w-full px-6 py-4 flex items-center justify-between">
           {/* Logo */}
           <div
-            onClick={() => router.push("/user/dashboard")}
+            onClick={() => router.push("/dashboard")}
             className="flex items-center gap-3 cursor-pointer"
           >
-            <div className="h-10 w-10 rounded-xl bg-emerald-100 flex items-center justify-center">
-              <div className="h-5 w-5 rounded-md bg-emerald-500" />
+            <div className="relative h-10 w-10 rounded-xl bg-emerald-100 overflow-hidden">
+              <Image
+                src="/images/cleanconnect.png"
+                alt="CleanConnect Logo"
+                fill
+                className="object-contain p-1"
+                sizes="40px"
+                priority
+              />
+              </div>
+              <span className="text-xl font-bold">CleanConnect</span>
             </div>
-            <span className="text-xl font-bold">CleanConnect</span>
-          </div>
 
           {/* Nav Items */}
           <nav className="hidden md:flex items-center gap-2 text-sm">
@@ -135,13 +143,13 @@ export default function DashboardPage() {
 
           {/* Actions */}
           <div className="flex items-center gap-3">
-            <button
+            {/* <button
               type="button"
               onClick={() => router.push("/profile")}
               className="rounded-full bg-white px-5 py-2 text-sm font-semibold text-gray-700 border hover:bg-gray-50"
             >
               Profile
-            </button>
+            </button> */}
 
             <button
               type="button"

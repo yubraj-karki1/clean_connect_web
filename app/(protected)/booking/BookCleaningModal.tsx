@@ -1,7 +1,7 @@
 "use client";
 
-import { X, CalendarDays, MapPin, FileText, Sparkles } from "lucide-react";
-import { useEffect } from "react";
+import { X, CalendarDays, MapPin, Sparkles, Phone } from "lucide-react";
+import { useEffect, useState } from "react";
 
 type Props = {
   open: boolean;
@@ -9,6 +9,9 @@ type Props = {
 };
 
 export default function BookCleaningModal({ open, onClose }: Props) {
+  const [phone, setPhone] = useState("");
+  const [phoneError, setPhoneError] = useState("");
+
   // Close on ESC
   useEffect(() => {
     if (!open) return;
@@ -20,6 +23,19 @@ export default function BookCleaningModal({ open, onClose }: Props) {
   }, [open, onClose]);
 
   if (!open) return null;
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (phone.length !== 10) {
+      setPhoneError("Phone number must be exactly 10 digits");
+      return;
+    }
+
+    setPhoneError("");
+    // TODO: call API later
+    onClose();
+  };
 
   return (
     <div className="fixed inset-0 z-[999] flex items-center justify-center">
@@ -55,20 +71,16 @@ export default function BookCleaningModal({ open, onClose }: Props) {
         </div>
 
         {/* Body */}
-        <form
-          className="p-5 space-y-4"
-          onSubmit={(e) => {
-            e.preventDefault();
-            // TODO: call API later
-            onClose();
-          }}
-        >
+        <form className="p-5 space-y-4" onSubmit={handleSubmit}>
           {/* Service Type */}
           <div>
             <label className="text-sm font-semibold">
               Service Type <span className="text-red-500">*</span>
             </label>
-            <select className="mt-2 w-full rounded-xl border px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-emerald-400">
+            <select
+              required
+              className="mt-2 w-full rounded-xl border px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-emerald-400"
+            >
               <option value="">Select a service</option>
               <option>Home Cleaning</option>
               <option>Office Cleaning</option>
@@ -77,6 +89,42 @@ export default function BookCleaningModal({ open, onClose }: Props) {
               <option>Window Cleaning</option>
               <option>Move-in/out</option>
             </select>
+          </div>
+
+          {/* Phone Number */}
+          <div>
+            <label className="text-sm font-semibold">
+              Phone Number <span className="text-red-500">*</span>
+            </label>
+            <div className="mt-2 relative">
+              <Phone
+                size={18}
+                className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"
+              />
+              <input
+                type="tel"
+                inputMode="numeric"
+                pattern="[0-9]{10}"
+                maxLength={10}
+                required
+                value={phone}
+                onChange={(e) => {
+                  const value = e.target.value.replace(/\D/g, "");
+                  setPhone(value);
+                  if (value.length === 10) setPhoneError("");
+                }}
+                placeholder="9876543210"
+                className={`w-full rounded-xl border pl-11 pr-4 py-3 text-sm outline-none focus:ring-2 ${
+                  phoneError
+                    ? "border-red-500 focus:ring-red-400"
+                    : "focus:ring-emerald-400"
+                }`}
+              />
+            </div>
+
+            {phoneError && (
+              <p className="mt-1 text-xs text-red-500">{phoneError}</p>
+            )}
           </div>
 
           {/* Date */}
@@ -91,6 +139,7 @@ export default function BookCleaningModal({ open, onClose }: Props) {
               />
               <input
                 type="date"
+                required
                 className="w-full rounded-xl border pl-11 pr-4 py-3 text-sm outline-none focus:ring-2 focus:ring-emerald-400"
               />
             </div>
@@ -101,7 +150,10 @@ export default function BookCleaningModal({ open, onClose }: Props) {
             <label className="text-sm font-semibold">
               Time <span className="text-red-500">*</span>
             </label>
-            <select className="mt-2 w-full rounded-xl border px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-emerald-400">
+            <select
+              required
+              className="mt-2 w-full rounded-xl border px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-emerald-400"
+            >
               <option value="">Select a time</option>
               <option>09:00 AM</option>
               <option>10:00 AM</option>
@@ -125,34 +177,11 @@ export default function BookCleaningModal({ open, onClose }: Props) {
               />
               <input
                 type="text"
+                required
                 placeholder="23 Main Street, Apt 4B"
                 className="w-full rounded-xl border pl-11 pr-4 py-3 text-sm outline-none focus:ring-2 focus:ring-emerald-400"
               />
             </div>
-          </div>
-
-          {/* City */}
-          <div>
-            <label className="text-sm font-semibold">
-              City <span className="text-red-500">*</span>
-            </label>
-            <input
-              type="text"
-              placeholder="New York"
-              className="mt-2 w-full rounded-xl border px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-emerald-400"
-            />
-          </div>
-
-          {/* Notes */}
-          <div>
-            <label className="text-sm font-semibold flex items-center gap-2">
-              <FileText size={16} className="text-gray-500" />
-              Additional Notes
-            </label>
-            <textarea
-              placeholder="Any special instructions or requests..."
-              className="mt-2 w-full rounded-xl border px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-emerald-400 min-h-[110px]"
-            />
           </div>
 
           {/* Submit */}
