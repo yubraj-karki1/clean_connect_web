@@ -16,6 +16,9 @@
     "react": "^19.2.3",
     "react-dom": "^19.2.3",
     "react-hook-form": "^7.69.0",
+    "react-toastify": "^11.0.5",
+    "schema": "^0.2.1",
+    "toastify": "^2.0.1",
     "zod": "^4.2.1"
   },
   "devDependencies": {

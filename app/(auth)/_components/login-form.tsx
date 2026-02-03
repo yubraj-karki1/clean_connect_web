@@ -7,7 +7,6 @@ import {
   EyeOff,
   ArrowLeft,
   Loader2,
-  CheckCircle,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
@@ -16,115 +15,103 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import Link from "next/link";
 
 import { LoginData, loginSchema } from "../schema";
-import { handleLogin } from "@/lib/actions/auth-action";
 
 export default function LoginPage() {
   const router = useRouter();
 
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
 
   const {
     register,
     handleSubmit,
-    formState: { errors, isSubmitting },
+    formState: { errors },
   } = useForm<LoginData>({
     resolver: zodResolver(loginSchema),
-    mode: "onSubmit",
   });
 
   const onSubmit = async (values: LoginData) => {
     setError(null);
-    setSuccess(null);
+    setLoading(true);
 
     try {
-      const response = await handleLogin(values);
+      const res = await fetch("http://localhost:5000/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(values),
+      });
 
-      if (!response.success) {
-        throw new Error(response.message || "Invalid email or password");
+      const data = await res.json();
+
+      if (!res.ok || !data.success) {
+        throw new Error(data.message || "Invalid credentials");
       }
 
-      // ✅ Success
-      setSuccess("Welcome back!");
+      document.cookie = `auth_token=${data.token}; path=/`;
+      document.cookie = `user_data=${JSON.stringify(data.data)}; path=/`;
+      // Also set token and role cookies for proxy.ts compatibility
+      document.cookie = `token=${data.token}; path=/`;
+      document.cookie = `role=${data.data.role}; path=/`;
 
-      // ⏳ Redirect after delay
-      setTimeout(() => {
-        router.push("/dashboard");
-      }, 1500);
-
+      data.data.role === "admin"
+        ? router.push("/admin/dashboard")
+        : router.push("/dashboard");
     } catch (err: any) {
       setError(err.message || "Login failed");
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <div className="relative min-h-screen flex items-center justify-center px-4 overflow-hidden bg-black text-white">
-
-      {/* Background Effects */}
-      <div className="absolute -top-40 -left-40 w-[500px] h-[500px] bg-gray-800 rounded-full blur-3xl opacity-40 animate-pulse" />
-      <div className="absolute top-1/3 -right-40 w-[500px] h-[500px] bg-gray-900 rounded-full blur-3xl opacity-30 animate-pulse" />
-
-      {/* Login Card */}
-      <div className="relative w-full max-w-lg bg-white/10 backdrop-blur-md rounded-3xl shadow-2xl p-10 z-10 border border-white/10">
+    <div className="min-h-screen flex items-center justify-center bg-black px-4 text-white">
+      {/* Card */}
+      <div className="relative w-full max-w-md rounded-2xl bg-gradient-to-b from-[#0f172a] to-[#020617] p-8 shadow-2xl border border-white/10">
 
         {/* Back */}
         <Link
-          href="/home"
-          className="flex items-center gap-2 text-sm text-teal-400 mb-8 hover:text-teal-500 w-fit"
+          href="/"
+          className="flex items-center gap-2 text-teal-400 text-sm mb-6 hover:underline"
         >
-          <ArrowLeft size={18} />
+          <ArrowLeft size={16} />
           Back
         </Link>
 
         {/* Title */}
-        <div className="text-center mb-8">
-          <h1 className="text-4xl font-extrabold text-teal-400">
-            CleanConnect
-          </h1>
-          <p className="text-gray-300 mt-2">
-            Welcome back! Please login to continue
-          </p>
-        </div>
+        <h1 className="text-3xl font-bold text-center text-teal-400">
+          CleanConnect
+        </h1>
+        <p className="text-center text-gray-400 mt-2 text-sm">
+          Welcome back! Please login to continue
+        </p>
 
         {/* Error */}
         {error && (
-          <div className="mb-5 p-3 rounded-lg bg-red-500/10 border border-red-500/50 text-red-500 text-sm text-center">
+          <div className="mt-4 p-3 rounded-lg bg-red-500/10 border border-red-500/40 text-red-400 text-sm text-center">
             {error}
           </div>
         )}
 
-        {/* Success */}
-        {success && (
-          <div className="mb-5 p-3 rounded-lg bg-green-500/10 border border-green-500/50 text-green-500 text-sm text-center flex items-center justify-center gap-2">
-            <CheckCircle size={18} />
-            {success}
-          </div>
-        )}
-
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+        {/* Form */}
+        <form onSubmit={handleSubmit(onSubmit)} className="mt-8 space-y-6">
 
           {/* Email */}
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">
-              Email Address
-            </label>
-            <div
-              className={`flex items-center border rounded-xl px-4 bg-black/20 focus-within:border-teal-400 ${
-                errors.email ? "border-red-500" : "border-gray-600"
-              }`}
-            >
-              <Mail size={20} className="text-teal-400" />
+            <label className="text-sm text-gray-300">Email Address</label>
+            <div className={`mt-2 flex items-center gap-3 rounded-xl border px-4 py-3 bg-black/40
+              ${errors.email ? "border-red-500" : "border-white/20"}
+            `}>
+              <Mail size={18} className="text-teal-400" />
               <input
                 {...register("email")}
                 type="email"
-                autoComplete="email"
                 placeholder="you@example.com"
-                className="w-full px-4 py-3 bg-transparent outline-none text-white"
+                className="w-full bg-transparent outline-none text-white placeholder:text-gray-500"
               />
             </div>
-            {errors.email?.message && (
-              <p className="text-xs text-red-500 mt-1">
+            {errors.email && (
+              <p className="text-xs text-red-400 mt-1">
                 {errors.email.message}
               </p>
             )}
@@ -132,56 +119,46 @@ export default function LoginPage() {
 
           {/* Password */}
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">
-              Password
-            </label>
-            <div
-              className={`flex items-center border rounded-xl px-4 bg-black/20 focus-within:border-teal-400 ${
-                errors.password ? "border-red-500" : "border-gray-600"
-              }`}
-            >
-              <Lock size={20} className="text-teal-400" />
+            <label className="text-sm text-gray-300">Password</label>
+            <div className={`mt-2 flex items-center gap-3 rounded-xl border px-4 py-3 bg-black/40
+              ${errors.password ? "border-red-500" : "border-white/20"}
+            `}>
+              <Lock size={18} className="text-teal-400" />
               <input
                 {...register("password")}
                 type={showPassword ? "text" : "password"}
-                autoComplete="current-password"
                 placeholder="••••••••"
-                className="w-full px-4 py-3 bg-transparent outline-none text-white"
+                className="w-full bg-transparent outline-none text-white placeholder:text-gray-500"
               />
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                className="ml-2 text-gray-400 hover:text-gray-200"
+                className="text-gray-400 hover:text-gray-200"
               >
-                {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
               </button>
             </div>
-            {errors.password?.message && (
-              <p className="text-xs text-red-500 mt-1">
-                {errors.password.message}
-              </p>
-            )}
           </div>
 
-          {/* Forgot Password */}
+          {/* Forgot */}
           <div className="text-right">
             <Link
               href="/forgot-password"
-              className="text-sm text-teal-500 hover:underline"
+              className="text-sm text-teal-400 hover:underline"
             >
               Forgot password?
             </Link>
           </div>
 
-          {/* Submit */}
+          {/* Button */}
           <button
             type="submit"
-            disabled={isSubmitting}
-            className="flex items-center justify-center gap-2 w-full bg-gradient-to-r from-teal-500 to-blue-500 text-white py-4 rounded-xl text-lg font-semibold disabled:opacity-60"
+            disabled={loading}
+            className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-gradient-to-r from-teal-500 to-blue-500 font-semibold disabled:opacity-60"
           >
-            {isSubmitting ? (
+            {loading ? (
               <>
-                <Loader2 className="animate-spin" size={20} />
+                <Loader2 size={18} className="animate-spin" />
                 Signing In...
               </>
             ) : (
@@ -190,13 +167,10 @@ export default function LoginPage() {
           </button>
         </form>
 
-        {/* Register */}
-        <p className="text-center text-gray-300 mt-8">
+        {/* Footer */}
+        <p className="mt-6 text-center text-gray-400 text-sm">
           Don&apos;t have an account?{" "}
-          <Link
-            href="/register"
-            className="text-teal-400 font-semibold hover:underline"
-          >
+          <Link href="/register" className="text-teal-400 hover:underline">
             Sign up
           </Link>
         </p>
