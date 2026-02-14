@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import BookCleaningModal from "../booking/BookCleaningModal";
 import Image from "next/image";
 import {
   Home,
@@ -62,11 +63,14 @@ const featuredCleaners = [
   },
 ];
 
+
 export default function DashboardPage() {
   const router = useRouter();
 
   const [flash, setFlash] = useState<string | null>(null);
   const [name, setName] = useState("Guest");
+  const [showBookingModal, setShowBookingModal] = useState(false);
+  const [selectedService, setSelectedService] = useState<string>("");
 
   useEffect(() => {
     const msg = sessionStorage.getItem("flash_success");
@@ -246,7 +250,10 @@ export default function DashboardPage() {
             <button
               key={s.title}
               type="button"
-              onClick={() => router.push("/booking")}
+              onClick={() => {
+                setSelectedService(s.title);
+                setShowBookingModal(true);
+              }}
               className="bg-white rounded-2xl shadow-sm hover:shadow-md transition p-6 flex flex-col items-center gap-4 border w-full"
             >
               <div className="h-16 w-16 rounded-2xl bg-gray-50 flex items-center justify-center text-3xl">
@@ -258,6 +265,9 @@ export default function DashboardPage() {
             </button>
           ))}
         </div>
+
+        {/* Book Cleaning Modal */}
+        <BookCleaningModal open={showBookingModal} onClose={() => setShowBookingModal(false)} selectedService={selectedService} />
       </section>
 
       <section className="w-full px-6 pb-14">
@@ -273,41 +283,48 @@ export default function DashboardPage() {
         </div>
 
         <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-          {featuredCleaners.map((c) => (
-            <button
-              key={c.name}
-              type="button"
-              onClick={() => router.push("/booking")}
-              className="text-left bg-white rounded-2xl border shadow-sm hover:shadow-md transition overflow-hidden"
-            >
-              <div className="relative h-48 w-full">
-                <img
-                  src={c.image}
-                  alt={c.name}
-                  className="h-full w-full object-cover"
-                />
+          {featuredCleaners.map((c) => {
+            // Try to match a service type from the cleaner's specialty
+            const matchedService = services.find(s => c.specialty.toLowerCase().includes(s.title.toLowerCase().split(' ')[0]));
+            return (
+              <button
+                key={c.name}
+                type="button"
+                onClick={() => {
+                  setSelectedService(matchedService ? matchedService.title : "");
+                  setShowBookingModal(true);
+                }}
+                className="text-left bg-white rounded-2xl border shadow-sm hover:shadow-md transition overflow-hidden"
+              >
+                <div className="relative h-48 w-full">
+                  <img
+                    src={c.image}
+                    alt={c.name}
+                    className="h-full w-full object-cover"
+                  />
 
-                <div className="absolute top-3 right-3 h-10 w-10 rounded-full bg-white/95 flex items-center justify-center shadow">
-                  <Heart size={18} className="text-gray-700" />
+                  <div className="absolute top-3 right-3 h-10 w-10 rounded-full bg-white/95 flex items-center justify-center shadow">
+                    <Heart size={18} className="text-gray-700" />
+                  </div>
+
+                  <div className="absolute bottom-3 left-3 rounded-full bg-white px-3 py-1 text-sm font-semibold text-gray-800 shadow">
+                    ${c.price}/hr
+                  </div>
                 </div>
 
-                <div className="absolute bottom-3 left-3 rounded-full bg-white px-3 py-1 text-sm font-semibold text-gray-800 shadow">
-                  ${c.price}/hr
-                </div>
-              </div>
+                <div className="p-5">
+                  <h3 className="text-base font-bold text-gray-900">{c.name}</h3>
+                  <p className="mt-1 text-sm text-gray-500">{c.specialty}</p>
 
-              <div className="p-5">
-                <h3 className="text-base font-bold text-gray-900">{c.name}</h3>
-                <p className="mt-1 text-sm text-gray-500">{c.specialty}</p>
-
-                <div className="mt-4 flex items-center gap-2 text-sm">
-                  <span className="text-amber-500">★</span>
-                  <span className="font-semibold text-gray-900">{c.rating}</span>
-                  <span className="text-gray-500">({c.reviews} reviews)</span>
+                  <div className="mt-4 flex items-center gap-2 text-sm">
+                    <span className="text-amber-500">★</span>
+                    <span className="font-semibold text-gray-900">{c.rating}</span>
+                    <span className="text-gray-500">({c.reviews} reviews)</span>
+                  </div>
                 </div>
-              </div>
-            </button>
-          ))}
+              </button>
+            );
+          })}
         </div>
       </section>
 

@@ -13,8 +13,9 @@ type User = {
   fullName: string;
   email: string;
   memberSince: string;
-  phoneNumber?: string; // ✅ added
-  address?: string;     // ✅ added
+  phoneNumber?: string;
+  address?: string;
+  // bio?: string;
   bookings: number;
   favorites: number;
   reviews: number;
@@ -26,19 +27,43 @@ type MessageState = { text: string; type: "ok" | "err" } | null;
 export default function UserProfilePage() {
   const router = useRouter();
 
-  // Dummy data (replace later with API data)
-  const [user, setUser] = useState<User>({
-    id: "dummyid123",
-    fullName: "Yubraj Karki",
-    email: "wgsrg@gmail.com",
-    memberSince: "January 31, 2026",
-    phoneNumber: "98XXXXXXXX",     
-    address: "Kathmandu, Nepal", 
-    bookings: 0,
-    favorites: 0,
-    reviews: 0,
-    profileImage: null,
-  });
+  // User state (fetched from backend)
+  const [user, setUser] = useState<User | null>(null);
+  // Fetch user data from backend
+  useEffect(() => {
+    async function fetchUser() {
+      try {
+        // Try to get user id from cookie (if available)
+        let userId = null;
+        try {
+          const cookie = document.cookie.split('; ').find(row => row.startsWith('user_data='));
+          if (cookie) {
+            const userData = JSON.parse(decodeURIComponent(cookie.split('=')[1]));
+            userId = userData.id || userData._id;
+          }
+        } catch {}
+        const id = userId || "6980180aaef2c2b8518013a5";
+        const res = await fetch(`/api/users/${id}`);
+        const data = await res.json();
+        if (!data.success) throw new Error(data.message || "No user");
+        setUser({
+          id: data.data._id,
+          fullName: data.data.fullName,
+          email: data.data.email,
+          memberSince: new Date(data.data.createdAt).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' }),
+          phoneNumber: data.data.phoneNumber,
+          address: data.data.address,
+          bookings: 0, // Set real value if available
+          favorites: 0, // Set real value if available
+          reviews: 0, // Set real value if available
+          profileImage: data.data.profileImage,
+        });
+      } catch {
+        setUser(null);
+      }
+    }
+    fetchUser();
+  }, []);
 
   // ✅ Only image is editable now (fullName can't change)
   const [imageFile, setImageFile] = useState<File | null>(null);
@@ -58,11 +83,12 @@ export default function UserProfilePage() {
   }, [previewUrl]);
 
   const initials = useMemo(() => {
+    if (!user || !user.fullName) return "U";
     const parts = user.fullName.trim().split(/\s+/);
     const a = parts[0]?.[0] ?? "U";
     const b = parts[1]?.[0] ?? "";
     return (a + b).toUpperCase();
-  }, [user.fullName]);
+  }, [user]);
 
   const onFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0] ?? null;
@@ -74,6 +100,12 @@ export default function UserProfilePage() {
     setSaving(true);
     setMessage(null);
 
+    if (!user) {
+      setMessage({ text: "User data not loaded.", type: "err" });
+      setSaving(false);
+      return;
+    }
+
     try {
       const formData = new FormData();
 
@@ -84,9 +116,8 @@ export default function UserProfilePage() {
       // ✅ Upload image only if selected
       if (imageFile) formData.append("image", imageFile);
 
-      // NOTE: If your backend is /api/auth/me (recommended), change to:
-      // const res = await fetch(`/api/auth/me`, { method: "PUT", body: formData });
-      const res = await fetch(`/api/auth/${user.id}`, {
+      // NOTE: If your backend is /api/users/[id], use:
+      const res = await fetch(`/api/users/${user.id}`, {
         method: "PUT",
         body: formData,
       });
@@ -121,11 +152,21 @@ export default function UserProfilePage() {
     }
   };
 
+  if (!user) {
+    return (
+      <main className="min-h-screen flex items-center justify-center bg-gradient-to-br from-emerald-50 to-white text-gray-900">
+        <Loader2 className="animate-spin" size={32} />
+        <span className="ml-3 text-lg font-semibold">Loading profile...</span>
+      </main>
+    );
+  }
+
+  // ...existing code...
   return (
-    <main className="min-h-screen bg-gray-50 text-gray-900">
+    <main className="min-h-screen bg-gradient-to-br from-emerald-50 to-white text-gray-900">
       {/* ===== Top Bar ===== */}
-      <header className="sticky top-0 z-50 border-b bg-white">
-        <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
+      <header className="sticky top-0 z-50 border-b bg-white/80 backdrop-blur">
+        <div className="mx-auto flex max-w-5xl items-center justify-between px-6 py-4">
           <button
             onClick={() => router.push("/dashboard")}
             className="flex items-center gap-3"
@@ -165,114 +206,83 @@ export default function UserProfilePage() {
       </header>
 
       {/* ===== Page ===== */}
-      <section className="mx-auto w-full max-w-6xl px-6 py-10">
-        <div className="mb-6">
-          <h1 className="text-2xl font-bold">My Profile</h1>
-          <p className="mt-1 text-sm text-gray-500">
-            Update your profile picture.
+      <section className="mx-auto w-full max-w-5xl px-4 py-10">
+        <div className="mb-8">
+          <h1 className="text-3xl font-extrabold tracking-tight">My Profile</h1>
+          <p className="mt-1 text-base text-gray-500">
+            Manage your account information and personalize your experience.
           </p>
         </div>
 
-        <div className="grid gap-6 md:grid-cols-[360px_1fr]">
+        <div className="grid gap-8 md:grid-cols-[340px_1fr]">
           {/* Left: Summary */}
-          <div className="rounded-2xl border bg-white p-6 shadow-sm">
-            <div className="flex items-center gap-4">
-              <div className="relative h-16 w-16 overflow-hidden rounded-full bg-gray-100">
-                {previewUrl || user.profileImage ? (
-                  <Image
-                    src={(previewUrl || user.profileImage) as string}
-                    alt="Profile"
-                    fill
-                    className="object-cover"
-                    sizes="64px"
-                  />
-                ) : (
-                  <div className="flex h-full w-full items-center justify-center text-lg font-bold text-gray-600">
-                    {initials}
-                  </div>
-                )}
-              </div>
-
-              <div className="min-w-0">
-                <p className="truncate text-lg font-bold">{user.fullName}</p>
-                <p className="truncate text-sm text-gray-500">{user.email}</p>
-                <p className="mt-1 text-xs text-gray-400">
-                  Member since {user.memberSince}
-                </p>
-              </div>
+          <div className="rounded-2xl border bg-white/90 p-8 shadow flex flex-col items-center">
+            <div className="relative h-28 w-28 overflow-hidden rounded-full bg-gray-100 border-4 border-emerald-100 shadow">
+              {previewUrl || user.profileImage ? (
+                <Image
+                  src={(previewUrl || user.profileImage) as string}
+                  alt="Profile"
+                  fill
+                  className="object-cover"
+                  sizes="112px"
+                />
+              ) : (
+                <div className="flex h-full w-full items-center justify-center text-4xl font-bold text-gray-400">
+                  {initials}
+                </div>
+              )}
             </div>
-
-            {/* ✅ Phone + Address */}
-            <div className="mt-5 space-y-3 text-sm">
-              <div className="flex items-center gap-2 text-gray-600">
+            <div className="mt-4 text-center">
+              <p className="truncate text-xl font-bold">{user?.fullName ?? "—"}</p>
+              <p className="truncate text-sm text-gray-500">{user?.email ?? "—"}</p>
+              <p className="mt-1 text-xs text-gray-400">
+                Member since {user?.memberSince ?? "—"}
+              </p>
+            </div>
+            <div className="mt-4 w-full">
+              <div className="flex items-center gap-2 text-gray-600 text-sm mb-1">
                 <Phone size={16} className="text-gray-400" />
-                <span className="truncate">{user.phoneNumber || "—"}</span>
+                <span className="truncate">{user?.phoneNumber ?? "—"}</span>
               </div>
-
-              <div className="flex items-center gap-2 text-gray-600">
+              <div className="flex items-center gap-2 text-gray-600 text-sm">
                 <MapPin size={16} className="text-gray-400" />
-                <span className="truncate">{user.address || "—"}</span>
+                <span className="truncate">{user?.address ?? "—"}</span>
               </div>
             </div>
-
-            <div className="mt-6 grid grid-cols-3 gap-3">
-              <Stat label="Bookings" value={user.bookings} />
-              <Stat label="Favorites" value={user.favorites} />
-              <Stat label="Reviews" value={user.reviews} />
+            <div className="mt-6 grid grid-cols-3 gap-3 w-full">
+              <Stat label="Bookings" value={user?.bookings ?? 0} />
+              <Stat label="Favorites" value={user?.favorites ?? 0} />
+              <Stat label="Reviews" value={user?.reviews ?? 0} />
             </div>
+            {/* Bio Section removed */}
           </div>
 
           {/* Right: Edit Form */}
-          <div className="rounded-2xl border bg-white p-6 shadow-sm">
+          <div className="rounded-2xl border bg-white/90 p-8 shadow">
             <div className="mb-4 flex items-center gap-2">
               <UserIcon size={18} className="text-gray-500" />
-              <h2 className="text-base font-bold">Edit profile</h2>
+              <h2 className="text-lg font-bold">Edit profile</h2>
             </div>
 
             <form
               onSubmit={handleUpdate}
               encType="multipart/form-data"
-              className="space-y-5"
+              className="space-y-6"
             >
-              {/* ✅ Full Name is NOT editable */}
+              {/* Full Name is NOT editable */}
               <div>
                 <label className="text-sm font-semibold text-gray-700">
                   Full Name
                 </label>
                 <input
-                  value={user.fullName}
+                  value={user?.fullName || ""}
                   readOnly
                   disabled
                   className="mt-2 w-full rounded-xl border bg-gray-100 px-4 py-3 text-sm text-gray-700 outline-none cursor-not-allowed"
                 />
               </div>
 
-              {/* ✅ Phone number (read-only) */}
-              <div>
-                <label className="text-sm font-semibold text-gray-700">
-                  Phone Number
-                </label>
-                <input
-                  value={user.phoneNumber || ""}
-                  readOnly
-                  disabled
-                  className="mt-2 w-full rounded-xl border bg-gray-100 px-4 py-3 text-sm text-gray-700 outline-none cursor-not-allowed"
-                />
-              </div>
-
-              {/* ✅ Address (read-only) */}
-              <div>
-                <label className="text-sm font-semibold text-gray-700">
-                  Address
-                </label>
-                <input
-                  value={user.address || ""}
-                  readOnly
-                  disabled
-                  className="mt-2 w-full rounded-xl border bg-gray-100 px-4 py-3 text-sm text-gray-700 outline-none cursor-not-allowed"
-                />
-              </div>
-
+              {/* Profile Image */}
               <div>
                 <label className="text-sm font-semibold text-gray-700">
                   Profile Image
@@ -296,6 +306,8 @@ export default function UserProfilePage() {
                   />
                 </label>
               </div>
+
+              {/* Bio (editable) removed */}
 
               <button
                 type="submit"
