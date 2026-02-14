@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition, useEffect } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { Eye, EyeOff, Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
@@ -9,6 +9,8 @@ import Link from "next/link";
 
 import { RegisterData, registerSchema } from "../schema";
 import { handleRegister } from "@/lib/actions/auth-action";
+
+const LOGIN_PATH = "/login"; // ✅ change if your login route is different
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -34,7 +36,7 @@ export default function RegisterPage() {
     }
   }, [errors]);
 
-  const onSubmit = async (values: RegisterData) => {
+  const onSubmit = (values: RegisterData) => {
     setError(null);
     setSuccess(null);
 
@@ -42,21 +44,23 @@ export default function RegisterPage() {
       try {
         const response = await handleRegister(values);
 
-        if (!response.success) {
-          setError(response.message || "Registration failed");
+        if (!response?.success) {
+          setError(response?.message || "Registration failed");
           return;
         }
 
-        // ✅ Success message
-        setSuccess("Registration successful. Please login.");
+        // ✅ success in GREEN (will be visible if redirect fails)
+        setSuccess("Registration successful. Redirecting...");
 
-        // ⏳ Redirect after delay
+        // ✅ redirect immediately
+        router.replace(LOGIN_PATH);
+
+        // ✅ fallback (if router navigation is blocked for any reason)
         setTimeout(() => {
-          router.push("/login");
-        }, 2000);
-
+          window.location.assign(LOGIN_PATH);
+        }, 100);
       } catch (err: any) {
-        setError(err.message || "Registration failed");
+        setError(err?.message || "Registration failed");
       }
     });
   };
@@ -64,7 +68,6 @@ export default function RegisterPage() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-[#0a0a0a] px-4 py-10">
       <div className="w-full max-w-[480px] bg-[#161616] rounded-[40px] p-10 shadow-2xl">
-
         {/* Header */}
         <div className="text-center mb-8">
           <h1 className="text-4xl font-bold text-[#00f2ea] mb-2">
@@ -72,21 +75,21 @@ export default function RegisterPage() {
           </h1>
           <p className="text-sm text-gray-300">
             Already have an account?{" "}
-            <Link href="/login" className="text-[#00c9c2] hover:underline">
+            <Link href={LOGIN_PATH} className="text-[#00c9c2] hover:underline">
               Login
             </Link>
           </p>
 
           {/* Error */}
-          {error && (
+          {error && !success && (
             <div className="mt-4 p-3 bg-red-500/10 border border-red-500/50 rounded-xl text-red-500 text-sm">
               {error}
             </div>
           )}
 
-          {/* Success */}
+          {/* ✅ Success (GREEN) */}
           {success && (
-            <div className="mt-4 p-3 bg-green-500/10 border border-green-500/50 rounded-xl text-green-500 text-sm">
+            <div className="mt-4 p-3 bg-green-600/10 border border-green-600/50 rounded-xl text-green-400 text-sm">
               {success}
             </div>
           )}
@@ -94,7 +97,6 @@ export default function RegisterPage() {
 
         {/* Form */}
         <form className="space-y-4" onSubmit={handleSubmit(onSubmit)}>
-
           {/* Full Name */}
           <div>
             <input
@@ -163,7 +165,7 @@ export default function RegisterPage() {
             />
             <button
               type="button"
-              onClick={() => setShowPassword(!showPassword)}
+              onClick={() => setShowPassword((s) => !s)}
               className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400"
             >
               {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
@@ -185,7 +187,7 @@ export default function RegisterPage() {
             />
             <button
               type="button"
-              onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+              onClick={() => setShowConfirmPassword((s) => !s)}
               className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400"
             >
               {showConfirmPassword ? <EyeOff size={20} /> : <Eye size={20} />}
@@ -209,9 +211,7 @@ export default function RegisterPage() {
             </span>
           </div>
           {errors.terms && (
-            <p className="text-xs text-red-500">
-              {errors.terms.message}
-            </p>
+            <p className="text-xs text-red-500">{errors.terms.message}</p>
           )}
 
           {/* Submit */}

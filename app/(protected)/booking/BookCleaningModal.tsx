@@ -6,11 +6,23 @@ import { useEffect, useState } from "react";
 type Props = {
   open: boolean;
   onClose: () => void;
+  selectedService?: string;
 };
 
-export default function BookCleaningModal({ open, onClose }: Props) {
+export default function BookCleaningModal({ open, onClose, selectedService }: Props) {
   const [phone, setPhone] = useState("");
   const [phoneError, setPhoneError] = useState("");
+  const [serviceType, setServiceType] = useState(selectedService || "");
+
+  // Update serviceType if selectedService changes (e.g., when opening modal for a new service)
+  useEffect(() => {
+    if (open && selectedService) {
+      setServiceType(selectedService);
+    }
+    if (open && !selectedService) {
+      setServiceType("");
+    }
+  }, [open, selectedService]);
 
   // Close on ESC
   useEffect(() => {
@@ -46,7 +58,7 @@ export default function BookCleaningModal({ open, onClose }: Props) {
       />
 
       {/* Modal */}
-      <div className="relative z-10 w-[92vw] max-w-md rounded-2xl bg-white shadow-xl border">
+      <div className="relative z-10 w-[98vw] max-w-2xl rounded-2xl bg-white shadow-xl border">
         {/* Header */}
         <div className="flex items-start justify-between p-5 border-b">
           <div className="flex items-start gap-3">
@@ -80,6 +92,8 @@ export default function BookCleaningModal({ open, onClose }: Props) {
             <select
               required
               className="mt-2 w-full rounded-xl border px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-emerald-400"
+              value={serviceType}
+              onChange={e => setServiceType(e.target.value)}
             >
               <option value="">Select a service</option>
               <option>Home Cleaning</option>
