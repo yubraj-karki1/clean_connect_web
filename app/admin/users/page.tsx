@@ -1,5 +1,6 @@
 "use client";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import AdminLayout from "./AdminLayout";
 
 function getCookie(name: string) {
@@ -21,6 +22,8 @@ export default function UsersPage() {
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [query, setQuery] = useState("");
+  const [roleFilter, setRoleFilter] = useState("all");
 
   const handleView = (id: string) => {
     window.location.href = `/admin/users/${id}`;
@@ -46,41 +49,91 @@ export default function UsersPage() {
       if (!res.ok) throw new Error("Failed to delete user");
       setUsers(users => users.filter(u => u._id !== id));
       alert("User deleted successfully");
-    } catch (err: any) {
-      alert(err.message || "Error deleting user");
+    } catch (err: unknown) {
+      alert(err instanceof Error ? err.message : "Error deleting user");
     }
   };
 
   useEffect(() => {
-    const fetchUsers = async () => {
-      setLoading(true);
-      setError(null);
-      try {
-        const token = getCookie("auth_token") || getCookie("token");
-        const res = await fetch("http://localhost:5000/api/admin/users/", {
-          credentials: "include",
-          headers: {
-            "Content-Type": "application/json",
-            "Authorization": token ? `Bearer ${token}` : "",
-          },
-          mode: "cors",
-        });
-        if (!res.ok) throw new Error("Failed to fetch users");
-        const data = await res.json();
-        setUsers(Array.isArray(data) ? data : data.data || []);
-      } catch (err: any) {
-        setError(err.message || "Error fetching users");
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchUsers();
+    loadUsers();
   }, []);
+
+  const loadUsers = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const token = getCookie("auth_token") || getCookie("token");
+      const res = await fetch("http://localhost:5000/api/admin/users/", {
+        credentials: "include",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": token ? `Bearer ${token}` : "",
+        },
+        mode: "cors",
+      });
+      if (!res.ok) throw new Error("Failed to fetch users");
+      const data = await res.json();
+      setUsers(Array.isArray(data) ? data : data.data || []);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Error fetching users");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const filteredUsers = useMemo(() => {
+    return users.filter((user) => {
+      const name = user.fullName?.toLowerCase() || "";
+      const email = user.email?.toLowerCase() || "";
+      const q = query.trim().toLowerCase();
+      const matchesQuery = !q || name.includes(q) || email.includes(q);
+      const matchesRole =
+        roleFilter === "all" || user.role.toLowerCase() === roleFilter.toLowerCase();
+      return matchesQuery && matchesRole;
+    });
+  }, [users, query, roleFilter]);
 
   return (
     <AdminLayout>
       <div className="p-6">
-        <h1 className="text-3xl font-bold mb-6 text-blue-600">Users</h1>
+        <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
+          <h1 className="text-3xl font-bold text-blue-600">Users</h1>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={loadUsers}
+              className="rounded bg-gray-100 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-200"
+            >
+              Refresh
+            </button>
+            <Link
+              href="/admin/users/create"
+              className="rounded bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700"
+            >
+              Add User
+            </Link>
+          </div>
+        </div>
+
+        <div className="mb-4 grid gap-3 md:grid-cols-2">
+          <input
+            type="text"
+            placeholder="Search by name or email"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            className="w-full rounded border border-gray-300 bg-white px-3 py-2"
+          />
+          <select
+            value={roleFilter}
+            onChange={(e) => setRoleFilter(e.target.value)}
+            className="w-full rounded border border-gray-300 bg-white px-3 py-2"
+          >
+            <option value="all">All roles</option>
+            <option value="admin">Admin</option>
+            <option value="user">User</option>
+          </select>
+        </div>
+
         <div className="overflow-x-auto">
           {loading ? (
             <div className="text-center py-10 text-lg text-blue-500">Loading users...</div>
@@ -97,12 +150,12 @@ export default function UsersPage() {
                 </tr>
               </thead>
               <tbody>
-                {users.length === 0 ? (
+                {filteredUsers.length === 0 ? (
                   <tr>
                     <td colSpan={4} className="text-center py-6 text-gray-500">No users found.</td>
                   </tr>
                 ) : (
-                  users.map((user) => (
+                  filteredUsers.map((user) => (
                     <tr key={user._id} className="hover:bg-blue-50">
                       <td className="px-4 py-2 border text-blue-700 font-medium">{user.fullName}</td>
                       <td className="px-4 py-2 border text-purple-700">{user.email}</td>

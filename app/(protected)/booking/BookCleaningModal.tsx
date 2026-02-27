@@ -49,7 +49,6 @@ export default function BookCleaningModal({ open, onClose, selectedService }: Pr
     getServices().then(res => {
       setServices(res.data || []);
     }).catch(() => setServices([]));
-    setServiceType("");
   }, [open]);
 
   if (!open) return null;
@@ -196,7 +195,7 @@ export default function BookCleaningModal({ open, onClose, selectedService }: Pr
             )}
           </div>
 
-v          {/* Date */}
+          {/* Date */}
           <div>
             <label className="text-sm font-semibold">
               Date <span className="text-red-500">*</span>
