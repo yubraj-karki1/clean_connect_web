@@ -2,6 +2,7 @@
 
 import { X, CalendarDays, MapPin, Sparkles, Phone } from "lucide-react";
 import { useEffect, useState } from "react";
+import { createBooking, getServices } from "@/lib/api/booking";
 
 type Props = {
   open: boolean;
@@ -12,7 +13,15 @@ type Props = {
 export default function BookCleaningModal({ open, onClose, selectedService }: Props) {
   const [phone, setPhone] = useState("");
   const [phoneError, setPhoneError] = useState("");
-  const [serviceType, setServiceType] = useState(selectedService || "");
+  const [serviceType, setServiceType] = useState("");
+  const [date, setDate] = useState("");
+  const [time, setTime] = useState("");
+  const [address, setAddress] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
+
+  const [services, setServices] = useState<any[]>([]);
 
   // Update serviceType if selectedService changes (e.g., when opening modal for a new service)
   useEffect(() => {
@@ -34,19 +43,67 @@ export default function BookCleaningModal({ open, onClose, selectedService }: Pr
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [open, onClose]);
 
+  // Fetch services on open
+  useEffect(() => {
+    if (!open) return;
+    getServices().then(res => {
+      setServices(res.data || []);
+    }).catch(() => setServices([]));
+    setServiceType("");
+  }, [open]);
+
   if (!open) return null;
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
+    setError("");
+    setSuccess("");
     if (phone.length !== 10) {
       setPhoneError("Phone number must be exactly 10 digits");
       return;
     }
-
     setPhoneError("");
-    // TODO: call API later
-    onClose();
+    if (!serviceType || !date || !time || !address) {
+      setError("All fields are required.");
+      return;
+    }
+    setLoading(true);
+    try {
+      // Compose ISO datetime string from date and time
+      const match = time.match(/(\d+):(\d+)\s*(AM|PM)/i);
+      const hourStr = match?.[1];
+      const minuteStr = match?.[2];
+      const ampm = match?.[3];
+      let hour24 = hourStr ? parseInt(hourStr, 10) : 0;
+      if (ampm && ampm.toUpperCase() === "PM" && hour24 !== 12) hour24 += 12;
+      if (ampm && ampm.toUpperCase() === "AM" && hour24 === 12) hour24 = 0;
+      const startAt = new Date(date + "T" + String(hour24).padStart(2, "0") + ":" + (minuteStr || "00") + ":00.000Z").toISOString();
+
+      // Map serviceType to a serviceId (for now, just send the name; in real app, fetch from backend)
+      const serviceId = serviceType;
+
+      // Compose booking data
+      const bookingData = {
+        serviceId,
+        startAt,
+        durationHours: 2, // Default duration, or add a field for this
+        notes: "",
+        address: {
+          line1: address,
+        },
+        // phone is not in backend DTO, but you may want to add it
+      };
+      await createBooking(bookingData);
+      setSuccess("Booking created successfully!");
+      setTimeout(() => {
+        setSuccess("");
+        onClose();
+      }, 1200);
+    } catch (err: any) {
+      setError(err?.response?.data?.message || err.message || "Booking failed");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -94,14 +151,12 @@ export default function BookCleaningModal({ open, onClose, selectedService }: Pr
               className="mt-2 w-full rounded-xl border px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-emerald-400"
               value={serviceType}
               onChange={e => setServiceType(e.target.value)}
+              disabled={services.length === 0}
             >
-              <option value="">Select a service</option>
-              <option>Home Cleaning</option>
-              <option>Office Cleaning</option>
-              <option>Carpet Cleaning</option>
-              <option>Deep Cleaning</option>
-              <option>Window Cleaning</option>
-              <option>Move-in/out</option>
+              <option value="">{services.length === 0 ? "No services available" : "Select a service"}</option>
+              {services.map((service) => (
+                <option key={service._id} value={service._id}>{service.title}</option>
+              ))}
             </select>
           </div>
 
@@ -141,7 +196,7 @@ export default function BookCleaningModal({ open, onClose, selectedService }: Pr
             )}
           </div>
 
-          {/* Date */}
+v          {/* Date */}
           <div>
             <label className="text-sm font-semibold">
               Date <span className="text-red-500">*</span>
@@ -154,6 +209,8 @@ export default function BookCleaningModal({ open, onClose, selectedService }: Pr
               <input
                 type="date"
                 required
+                value={date}
+                onChange={e => setDate(e.target.value)}
                 className="w-full rounded-xl border pl-11 pr-4 py-3 text-sm outline-none focus:ring-2 focus:ring-emerald-400"
               />
             </div>
@@ -167,15 +224,17 @@ export default function BookCleaningModal({ open, onClose, selectedService }: Pr
             <select
               required
               className="mt-2 w-full rounded-xl border px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-emerald-400"
+              value={time}
+              onChange={e => setTime(e.target.value)}
             >
               <option value="">Select a time</option>
-              <option>09:00 AM</option>
-              <option>10:00 AM</option>
-              <option>11:00 AM</option>
-              <option>01:00 PM</option>
-              <option>02:00 PM</option>
-              <option>03:00 PM</option>
-              <option>04:00 PM</option>
+              <option value="09:00 AM">09:00 AM</option>
+              <option value="10:00 AM">10:00 AM</option>
+              <option value="11:00 AM">11:00 AM</option>
+              <option value="01:00 PM">01:00 PM</option>
+              <option value="02:00 PM">02:00 PM</option>
+              <option value="03:00 PM">03:00 PM</option>
+              <option value="04:00 PM">04:00 PM</option>
             </select>
           </div>
 
@@ -192,6 +251,8 @@ export default function BookCleaningModal({ open, onClose, selectedService }: Pr
               <input
                 type="text"
                 required
+                value={address}
+                onChange={e => setAddress(e.target.value)}
                 placeholder="23 Main Street, Apt 4B"
                 className="w-full rounded-xl border pl-11 pr-4 py-3 text-sm outline-none focus:ring-2 focus:ring-emerald-400"
               />
@@ -199,11 +260,14 @@ export default function BookCleaningModal({ open, onClose, selectedService }: Pr
           </div>
 
           {/* Submit */}
+          {error && <p className="text-red-500 text-sm text-center">{error}</p>}
+          {success && <p className="text-green-600 text-sm text-center">{success}</p>}
           <button
             type="submit"
-            className="w-full rounded-xl bg-emerald-500 py-3 text-sm font-semibold text-white shadow hover:bg-emerald-600"
+            className="w-full rounded-xl bg-emerald-500 py-3 text-sm font-semibold text-white shadow hover:bg-emerald-600 disabled:opacity-60"
+            disabled={loading || services.length === 0}
           >
-            Confirm Booking
+            {services.length === 0 ? "No services to book" : (loading ? "Booking..." : "Confirm Booking")}
           </button>
         </form>
       </div>

@@ -1,7 +1,11 @@
 import axios, { AxiosHeaders, type InternalAxiosRequestConfig } from "axios";
 
+// In the browser, use relative URLs so requests go through Next.js rewrites (same origin → no CORS).
+// On the server (SSR / Server Actions), hit the backend directly.
 const BASE_URL =
-  process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:5050";
+  typeof window === "undefined"
+    ? (process.env.BACKEND_URL || "http://localhost:5000")
+    : "";
 
 const axiosInstance = axios.create({
   baseURL: BASE_URL,

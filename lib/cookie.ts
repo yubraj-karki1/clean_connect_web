@@ -20,7 +20,8 @@ export const setAuthToken = async (token: string) => {
 }
 export const getAuthToken = async () => {
     const cookieStore = await cookies();
-    return cookieStore.get('auth_token')?.value || null;
+    // Backward compatibility: some flows still set `token` instead of `auth_token`.
+    return cookieStore.get('auth_token')?.value || cookieStore.get('token')?.value || null;
 }
 export const setUserData = async (userData: UserData) => {
     const cookieStore = await cookies();

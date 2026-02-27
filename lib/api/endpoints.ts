@@ -17,4 +17,11 @@ export const API = {
       DELETE: (id: string) => `/api/admin/users/${id}`, // DELETE
     },
   },
+
+  WORKER: {
+    AVAILABLE_JOBS: "/api/bookings/available",   // GET — open bookings
+    MY_JOBS: "/api/bookings/worker/me",          // GET — worker's accepted jobs
+    ACCEPT: (id: string) => `/api/bookings/${id}/accept`,   // PATCH
+    COMPLETE: (id: string) => `/api/bookings/${id}/complete`, // PATCH
+  },
 } as const;

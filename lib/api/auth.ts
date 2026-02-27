@@ -5,7 +5,13 @@ import { API } from "./endpoints"
 
 export const register = async (registerData: RegisterData) => {
     try {
-        const response = await axios.post(API.AUTH.REGISTER, registerData)
+        // Map frontend model to backend auth DTO
+        const { terms, fullName, ...rest } = registerData as any;
+        const payload = {
+            ...rest,
+            username: fullName,
+        };
+        const response = await axios.post(API.AUTH.REGISTER, payload)
         return response.data
     } catch (error: Error | any) {
         throw new Error(error.response?.data?.message || error.message || 'Registration failed')

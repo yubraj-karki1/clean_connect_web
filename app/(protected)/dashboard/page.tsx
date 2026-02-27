@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import BookCleaningModal from "../booking/BookCleaningModal";
 import Image from "next/image";
 import {
@@ -13,16 +13,28 @@ import {
   Search,
   SlidersHorizontal,
   CheckCircle,
-} from "lucide-react";  
+  LogOut,
+} from "lucide-react";
+import { getServices } from "@/lib/api/booking";
+import { handleLogout } from "@/lib/actions/auth-action";
 
-const services = [
-  { title: "Home Cleaning", emoji: "🏠" },
-  { title: "Office Cleaning", emoji: "🏢" },
-  { title: "Carpet Cleaning", emoji: "🧽" },
-  { title: "Deep Cleaning", emoji: "✨" },
-  { title: "Window Cleaning", emoji: "🪟" },
-  { title: "Move-in/out", emoji: "📦" },
-];
+/* Emoji mapping for service titles */
+const serviceEmojis: Record<string, string> = {
+  home: "🏠",
+  office: "🏢",
+  carpet: "🧽",
+  deep: "✨",
+  window: "🪟",
+  move: "📦",
+};
+
+function getEmoji(title: string) {
+  const lower = title.toLowerCase();
+  for (const [k, v] of Object.entries(serviceEmojis)) {
+    if (lower.includes(k)) return v;
+  }
+  return "🧹";
+}
 
 const featuredCleaners = [
   {
@@ -71,7 +83,13 @@ export default function DashboardPage() {
   const [name, setName] = useState("Guest");
   const [showBookingModal, setShowBookingModal] = useState(false);
   const [selectedService, setSelectedService] = useState<string>("");
+  const [apiServices, setApiServices] = useState<any[]>([]);
+  const [favorites, setFavorites] = useState<any[]>([]);
+  const [loggingOut, setLoggingOut] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchTarget, setSearchTarget] = useState<"all" | "services" | "cleaners">("all");
 
+  // Flash message
   useEffect(() => {
     const msg = sessionStorage.getItem("flash_success");
     if (msg) {
@@ -82,10 +100,80 @@ export default function DashboardPage() {
     }
   }, []);
 
+  // User name from sessionStorage or cookie
   useEffect(() => {
     const n = sessionStorage.getItem("flash_name");
-    if (n) setName(n);
+    if (n) {
+      setName(n);
+      return;
+    }
+    // Fallback: read from user_data cookie
+    try {
+      const cookie = document.cookie.split("; ").find((c) => c.startsWith("user_data="));
+      if (cookie) {
+        const userData = JSON.parse(decodeURIComponent(cookie.split("=").slice(1).join("=")));
+        if (userData.fullName) setName(userData.fullName);
+        else if (userData.email) setName(userData.email.split("@")[0]);
+      }
+    } catch {}
   }, []);
+
+  // Fetch services from API
+  useEffect(() => {
+    getServices()
+      .then((res) => setApiServices(res.data || []))
+      .catch(() => setApiServices([]));
+  }, []);
+
+  // Load favorites from localStorage
+  useEffect(() => {
+    try {
+      const favs = localStorage.getItem("favorites");
+      if (favs) setFavorites(JSON.parse(favs));
+    } catch {}
+  }, []);
+
+  const toggleFavorite = (cleaner: (typeof featuredCleaners)[0]) => {
+    setFavorites((prev) => {
+      const exists = prev.some((f) => f.name === cleaner.name);
+      const updated = exists
+        ? prev.filter((f) => f.name !== cleaner.name)
+        : [...prev, cleaner];
+      localStorage.setItem("favorites", JSON.stringify(updated));
+      return updated;
+    });
+  };
+
+  const isFavorite = (cleanerName: string) =>
+    favorites.some((f) => f.name === cleanerName);
+
+  const query = searchQuery.trim().toLowerCase();
+
+  const filteredServices = useMemo(() => {
+    if (!query || searchTarget === "cleaners") return apiServices;
+    return apiServices.filter((s: any) =>
+      String(s?.title || "").toLowerCase().includes(query)
+    );
+  }, [apiServices, query, searchTarget]);
+
+  const filteredCleaners = useMemo(() => {
+    if (!query || searchTarget === "services") return featuredCleaners;
+    return featuredCleaners.filter((c) =>
+      `${c.name} ${c.specialty}`.toLowerCase().includes(query)
+    );
+  }, [query, searchTarget]);
+
+  const onLogout = async () => {
+    setLoggingOut(true);
+    try { await handleLogout(); } catch {}
+    document.cookie = "auth_token=; Max-Age=0; path=/";
+    document.cookie = "user_data=; Max-Age=0; path=/";
+    document.cookie = "token=; Max-Age=0; path=/";
+    document.cookie = "role=; Max-Age=0; path=/";
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
+    window.location.href = "/login";
+  };
 
   return (
     <main className="min-h-screen w-full bg-gray-50 text-gray-900">
@@ -147,20 +235,21 @@ export default function DashboardPage() {
 
           {/* Actions */}
           <div className="flex items-center gap-3">
-            {/* <button
-              type="button"
-              onClick={() => router.push("/profile")}
-              className="rounded-full bg-white px-5 py-2 text-sm font-semibold text-gray-700 border hover:bg-gray-50"
-            >
-              Profile
-            </button> */}
-
             <button
               type="button"
               onClick={() => router.push("/booking")}
               className="rounded-full bg-emerald-500 px-5 py-2 text-sm font-semibold text-white shadow hover:bg-emerald-600"
             >
               Book Now
+            </button>
+            <button
+              type="button"
+              disabled={loggingOut}
+              onClick={onLogout}
+              className="flex items-center gap-2 rounded-full border border-red-500 px-4 py-2 text-sm font-semibold text-red-500 hover:bg-red-50 disabled:opacity-60"
+            >
+              <LogOut size={14} />
+              {loggingOut ? "..." : "Logout"}
             </button>
           </div>
         </div>
@@ -205,17 +294,37 @@ export default function DashboardPage() {
                   <Search size={18} className="text-gray-400" />
                   <input
                     placeholder="Search for cleaning service..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
                     className="w-full outline-none bg-transparent text-sm"
                   />
                 </div>
 
-                <button
-                  type="button"
-                  className="flex items-center justify-center gap-2 rounded-2xl bg-white px-5 py-3 text-sm font-semibold text-gray-800 hover:bg-gray-100"
-                >
+                <div className="flex items-center justify-center gap-2 rounded-2xl bg-white px-4 py-3 text-sm font-semibold text-gray-800">
                   <SlidersHorizontal size={18} />
-                  Filters
-                </button>
+                  <select
+                    value={searchTarget}
+                    onChange={(e) => setSearchTarget(e.target.value as "all" | "services" | "cleaners")}
+                    className="bg-transparent text-sm outline-none"
+                    aria-label="Search options"
+                  >
+                    <option value="all">All</option>
+                    <option value="services">Services</option>
+                    <option value="cleaners">Cleaners</option>
+                  </select>
+                </div>
+                {(searchQuery || searchTarget !== "all") && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSearchQuery("");
+                      setSearchTarget("all");
+                    }}
+                    className="rounded-2xl border border-white/60 px-4 py-3 text-sm font-semibold text-white hover:bg-white/15"
+                  >
+                    Clear
+                  </button>
+                )}
               </div>
             </div>
 
@@ -246,25 +355,36 @@ export default function DashboardPage() {
         </div>
 
         <div className="mt-6 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-5">
-          {services.map((s) => (
+          {apiServices.length > 0 ? filteredServices.map((s: any) => (
             <button
-              key={s.title}
+              key={s._id}
               type="button"
               onClick={() => {
-                setSelectedService(s.title);
+                setSelectedService(s._id);
                 setShowBookingModal(true);
               }}
               className="bg-white rounded-2xl shadow-sm hover:shadow-md transition p-6 flex flex-col items-center gap-4 border w-full"
             >
               <div className="h-16 w-16 rounded-2xl bg-gray-50 flex items-center justify-center text-3xl">
-                {s.emoji}
+                {getEmoji(s.title)}
               </div>
               <p className="text-sm font-semibold text-gray-800 text-center">
                 {s.title}
               </p>
             </button>
-          ))}
+          )) : (
+            /* Fallback placeholders while loading */
+            [1,2,3,4,5,6].map((i) => (
+              <div key={i} className="bg-white rounded-2xl shadow-sm p-6 flex flex-col items-center gap-4 border w-full animate-pulse">
+                <div className="h-16 w-16 rounded-2xl bg-gray-100" />
+                <div className="h-4 w-20 rounded bg-gray-100" />
+              </div>
+            ))
+          )}
         </div>
+        {apiServices.length > 0 && filteredServices.length === 0 && (
+          <p className="mt-4 text-sm text-gray-500">No services match your search.</p>
+        )}
 
         {/* Book Cleaning Modal */}
         <BookCleaningModal open={showBookingModal} onClose={() => setShowBookingModal(false)} selectedService={selectedService} />
@@ -283,49 +403,66 @@ export default function DashboardPage() {
         </div>
 
         <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-          {featuredCleaners.map((c) => {
+          {filteredCleaners.map((c) => {
             // Try to match a service type from the cleaner's specialty
-            const matchedService = services.find(s => c.specialty.toLowerCase().includes(s.title.toLowerCase().split(' ')[0]));
+            const matchedService = apiServices.find(s => c.specialty.toLowerCase().includes(s.title.toLowerCase().split(' ')[0]));
+            const fav = isFavorite(c.name);
             return (
-              <button
+              <div
                 key={c.name}
-                type="button"
-                onClick={() => {
-                  setSelectedService(matchedService ? matchedService.title : "");
-                  setShowBookingModal(true);
-                }}
                 className="text-left bg-white rounded-2xl border shadow-sm hover:shadow-md transition overflow-hidden"
               >
-                <div className="relative h-48 w-full">
-                  <img
-                    src={c.image}
-                    alt={c.name}
-                    className="h-full w-full object-cover"
-                  />
+                <div
+                  className="cursor-pointer"
+                  onClick={() => {
+                    setSelectedService(matchedService ? matchedService._id : "");
+                    setShowBookingModal(true);
+                  }}
+                >
+                  <div className="relative h-48 w-full">
+                    <img
+                      src={c.image}
+                      alt={c.name}
+                      className="h-full w-full object-cover"
+                    />
 
-                  <div className="absolute top-3 right-3 h-10 w-10 rounded-full bg-white/95 flex items-center justify-center shadow">
-                    <Heart size={18} className="text-gray-700" />
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        toggleFavorite(c);
+                      }}
+                      className="absolute top-3 right-3 h-10 w-10 rounded-full bg-white/95 flex items-center justify-center shadow hover:scale-110 transition-transform"
+                    >
+                      <Heart
+                        size={18}
+                        className={fav ? "text-red-500 fill-red-500" : "text-gray-700"}
+                      />
+                    </button>
+
+                    <div className="absolute bottom-3 left-3 rounded-full bg-white px-3 py-1 text-sm font-semibold text-gray-800 shadow">
+                      ${c.price}/hr
+                    </div>
                   </div>
 
-                  <div className="absolute bottom-3 left-3 rounded-full bg-white px-3 py-1 text-sm font-semibold text-gray-800 shadow">
-                    ${c.price}/hr
+                  <div className="p-5">
+                    <h3 className="text-base font-bold text-gray-900">{c.name}</h3>
+                    <p className="mt-1 text-sm text-gray-500">{c.specialty}</p>
+
+                    <div className="mt-4 flex items-center gap-2 text-sm">
+                      <span className="text-amber-500">★</span>
+                      <span className="font-semibold text-gray-900">{c.rating}</span>
+                      <span className="text-gray-500">({c.reviews} reviews)</span>
+                    </div>
                   </div>
                 </div>
-
-                <div className="p-5">
-                  <h3 className="text-base font-bold text-gray-900">{c.name}</h3>
-                  <p className="mt-1 text-sm text-gray-500">{c.specialty}</p>
-
-                  <div className="mt-4 flex items-center gap-2 text-sm">
-                    <span className="text-amber-500">★</span>
-                    <span className="font-semibold text-gray-900">{c.rating}</span>
-                    <span className="text-gray-500">({c.reviews} reviews)</span>
-                  </div>
-                </div>
-              </button>
+              </div>
             );
           })}
         </div>
+        {filteredCleaners.length === 0 && (
+          <p className="mt-4 text-sm text-gray-500">No cleaners match your search.</p>
+        )}
       </section>
 
       {/* Footer */}

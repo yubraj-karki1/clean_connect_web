@@ -1,6 +1,9 @@
 "use client";
 import React, { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import AdminLayout from "../users/AdminLayout";
+import { handleLogout } from "@/lib/actions/auth-action";
+import LogoutConfirmModal from "@/app/_components/LogoutConfirmModal";
 
 function getCookie(name: string) {
   if (typeof document === "undefined") return null;
@@ -18,9 +21,32 @@ interface User {
 }
 
 export default function AdminDashboardPage() {
+  const router = useRouter();
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [loggingOut, setLoggingOut] = useState(false);
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
+
+  const onLogout = async () => {
+    setLoggingOut(true);
+    try {
+      // Clear server-side cookies via server action
+      await handleLogout();
+    } catch (_) {}
+    // Clear client-side cookies
+    document.cookie = "auth_token=; Max-Age=0; path=/";
+    document.cookie = "user_data=; Max-Age=0; path=/";
+    document.cookie = "token=; Max-Age=0; path=/";
+    document.cookie = "role=; Max-Age=0; path=/";
+    // Clear localStorage
+    if (typeof window !== "undefined") {
+      localStorage.removeItem("token");
+      localStorage.removeItem("user");
+    }
+    // Hard redirect to login
+    window.location.href = "/login";
+  };
 
   useEffect(() => {
     const fetchUsers = async () => {
@@ -56,7 +82,21 @@ export default function AdminDashboardPage() {
 
   return (
     <AdminLayout>
-      <div className="p-8 bg-gradient-to-r from-blue-100 via-purple-100 to-pink-100 rounded shadow">
+      <LogoutConfirmModal
+        open={showLogoutModal}
+        onConfirm={onLogout}
+        onCancel={() => setShowLogoutModal(false)}
+        loading={loggingOut}
+      />
+      <div className="p-8 bg-gradient-to-r from-blue-100 via-purple-100 to-pink-100 rounded shadow relative">
+        <button
+          type="button"
+          disabled={loggingOut}
+          onClick={() => setShowLogoutModal(true)}
+          className="absolute top-8 right-8 rounded-full bg-red-500 px-5 py-2 text-sm font-semibold text-white shadow hover:bg-red-600 disabled:opacity-60"
+        >
+          {loggingOut ? "Logging out…" : "Logout"}
+        </button>
         <h1 className="text-4xl font-bold mb-4 text-blue-600">Admin Dashboard</h1>
         {loading ? (
           <div className="text-center py-10 text-lg text-blue-500">Loading stats...</div>
