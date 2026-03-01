@@ -2,14 +2,8 @@
 import React, { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import AdminLayout from "./AdminLayout";
-
-function getCookie(name: string) {
-  if (typeof document === "undefined") return null;
-  const value = `; ${document.cookie}`;
-  const parts = value.split(`; ${name}=`);
-  if (parts.length === 2) return parts.pop()?.split(';').shift() || null;
-  return null;
-}
+import { useRouter } from "next/navigation";
+import { deleteAdminUser, listAdminUsers } from "@/lib/api/admin";
 
 interface User {
   _id: string;
@@ -19,6 +13,7 @@ interface User {
 }
 
 export default function UsersPage() {
+  const router = useRouter();
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -26,27 +21,17 @@ export default function UsersPage() {
   const [roleFilter, setRoleFilter] = useState("all");
 
   const handleView = (id: string) => {
-    window.location.href = `/admin/users/${id}`;
+    router.push(`/admin/users/${id}`);
   };
 
   const handleEdit = (id: string) => {
-    window.location.href = `/admin/users/${id}/edit`;
+    router.push(`/admin/users/${id}/edit`);
   };
 
   const handleDelete = async (id: string) => {
     if (!confirm("Are you sure you want to delete this user?")) return;
-    const token = getCookie("auth_token") || getCookie("token");
     try {
-      const res = await fetch(`http://localhost:5000/api/admin/users/${id}`, {
-        method: "DELETE",
-        credentials: "include",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": token ? `Bearer ${token}` : "",
-        },
-        mode: "cors"
-      });
-      if (!res.ok) throw new Error("Failed to delete user");
+      await deleteAdminUser(id);
       setUsers(users => users.filter(u => u._id !== id));
       alert("User deleted successfully");
     } catch (err: unknown) {
@@ -62,18 +47,8 @@ export default function UsersPage() {
     setLoading(true);
     setError(null);
     try {
-      const token = getCookie("auth_token") || getCookie("token");
-      const res = await fetch("http://localhost:5000/api/admin/users/", {
-        credentials: "include",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": token ? `Bearer ${token}` : "",
-        },
-        mode: "cors",
-      });
-      if (!res.ok) throw new Error("Failed to fetch users");
-      const data = await res.json();
-      setUsers(Array.isArray(data) ? data : data.data || []);
+      const data = await listAdminUsers();
+      setUsers(data as User[]);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Error fetching users");
     } finally {
@@ -131,6 +106,7 @@ export default function UsersPage() {
             <option value="all">All roles</option>
             <option value="admin">Admin</option>
             <option value="user">User</option>
+            <option value="worker">Worker</option>
           </select>
         </div>
 

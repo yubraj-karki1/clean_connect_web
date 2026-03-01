@@ -41,6 +41,18 @@ export default function FavoritePage() {
     }
   };
 
+  const getFavoriteDetails = (fav: any, idx: number) => {
+    const cities = ["Kathmandu", "Lalitpur", "Bhaktapur", "Pokhara", "Biratnagar", "Butwal"];
+    const slots = ["Today, 3:00 PM", "Today, 5:30 PM", "Tomorrow, 9:00 AM", "Tomorrow, 11:00 AM"];
+    const features = ["Eco-friendly supplies", "Background verified", "Own cleaning equipment", "Weekend availability"];
+    return {
+      experience: fav?.experience ?? `${2 + (idx % 5)}+ years`,
+      location: fav?.location ?? `${cities[idx % cities.length]}, NP`,
+      nextAvailable: fav?.nextAvailable ?? slots[idx % slots.length],
+      features: Array.isArray(fav?.features) && fav.features.length > 0 ? fav.features : features.slice(0, 2 + (idx % 2)),
+    };
+  };
+
   return (
     <main className="relative min-h-screen overflow-x-hidden bg-[radial-gradient(circle_at_top_left,_#d1fae5_0%,_#ecfeff_35%,_#f8fafc_70%)] text-slate-900 dark:bg-[radial-gradient(circle_at_top_left,_#0f172a_0%,_#111827_45%,_#020617_100%)] dark:text-slate-100">
       <div className="pointer-events-none absolute inset-0">
@@ -139,6 +151,10 @@ export default function FavoritePage() {
                 key={fav.name || idx}
                 className="group relative overflow-hidden rounded-3xl border border-white/90 bg-white/90 p-6 shadow-lg shadow-slate-200/60 backdrop-blur transition duration-300 hover:-translate-y-1 hover:shadow-xl hover:shadow-emerald-100/60 dark:border-slate-700 dark:bg-slate-900/75 dark:shadow-slate-900/50 dark:hover:shadow-cyan-900/40"
               >
+                {(() => {
+                  const details = getFavoriteDetails(fav, idx);
+                  return (
+                    <>
                 <div className="pointer-events-none absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-emerald-400 via-teal-300 to-cyan-300" />
 
                 <div className="mb-4 flex items-center gap-4">
@@ -166,7 +182,29 @@ export default function FavoritePage() {
                   <div className="rounded-lg bg-slate-50 px-3 py-2 dark:bg-slate-800/80">
                     <span className="font-semibold text-slate-800 dark:text-slate-100">Price:</span> ${fav.price}/hr
                   </div>
+                  <div className="rounded-lg bg-slate-50 px-3 py-2 dark:bg-slate-800/80">
+                    <span className="font-semibold text-slate-800 dark:text-slate-100">Experience:</span> {details.experience}
+                  </div>
+                  <div className="rounded-lg bg-slate-50 px-3 py-2 dark:bg-slate-800/80">
+                    <span className="font-semibold text-slate-800 dark:text-slate-100">Location:</span> {details.location}
+                  </div>
+                  <div className="rounded-lg bg-emerald-50 px-3 py-2 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-200">
+                    <span className="font-semibold">Next available:</span> {details.nextAvailable}
+                  </div>
+                  <div className="flex flex-wrap gap-2 pt-1">
+                    {details.features.map((feature: string) => (
+                      <span
+                        key={`${fav.name}-${feature}`}
+                        className="rounded-full border border-cyan-200 bg-cyan-50 px-2.5 py-1 text-xs font-semibold text-cyan-700 dark:border-cyan-900/60 dark:bg-cyan-900/30 dark:text-cyan-200"
+                      >
+                        {feature}
+                      </span>
+                    ))}
+                  </div>
                 </div>
+                    </>
+                  );
+                })()}
               </article>
             ))}
           </div>

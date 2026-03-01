@@ -5,23 +5,7 @@ import Link from "next/link";
 import AdminLayout from "../users/AdminLayout";
 import { handleLogout } from "@/lib/actions/auth-action";
 import LogoutConfirmModal from "@/app/_components/LogoutConfirmModal";
-
-function getCookie(name: string) {
-  if (typeof document === "undefined") return null;
-  const value = `; ${document.cookie}`;
-  const parts = value.split(`; ${name}=`);
-  if (parts.length === 2) return parts.pop()?.split(";").shift() || null;
-  return null;
-}
-
-function getClientToken() {
-  const fromCookie = getCookie("auth_token") || getCookie("token");
-  if (fromCookie) return fromCookie;
-  if (typeof window !== "undefined") {
-    return localStorage.getItem("token");
-  }
-  return null;
-}
+import { listAdminBookings, listAdminUsers } from "@/lib/api/admin";
 
 type RefEntity = string | { _id?: string; fullName?: string; email?: string; title?: string };
 
@@ -39,46 +23,6 @@ interface Booking {
   createdAt?: string;
   userId?: RefEntity;
   serviceId?: RefEntity;
-}
-
-function isBookingLike(value: unknown): value is Booking {
-  if (!value || typeof value !== "object") return false;
-  const obj = value as Record<string, unknown>;
-  return typeof obj._id === "string" || typeof obj.status === "string" || "serviceId" in obj || "userId" in obj;
-}
-
-function findBookingArrayDeep(value: unknown): Booking[] {
-  if (Array.isArray(value)) {
-    return value.some(isBookingLike) ? (value as Booking[]) : [];
-  }
-  if (!value || typeof value !== "object") return [];
-
-  for (const nested of Object.values(value as Record<string, unknown>)) {
-    const found = findBookingArrayDeep(nested);
-    if (found.length) return found;
-  }
-  return [];
-}
-
-function extractArrayFromPayload(payload: unknown): Booking[] {
-  if (Array.isArray(payload)) return payload.some(isBookingLike) ? (payload as Booking[]) : [];
-  if (!payload || typeof payload !== "object") return [];
-
-  const obj = payload as Record<string, unknown>;
-  const candidates = [
-    obj.data,
-    obj.bookings,
-    obj.results,
-    obj.items,
-    (obj.data as Record<string, unknown> | undefined)?.bookings,
-    (obj.data as Record<string, unknown> | undefined)?.items,
-  ];
-
-  for (const candidate of candidates) {
-    if (Array.isArray(candidate) && candidate.some(isBookingLike)) return candidate as Booking[];
-  }
-
-  return findBookingArrayDeep(payload);
 }
 
 function entityName(value: RefEntity | undefined, fallback = "-") {
@@ -127,57 +71,12 @@ export default function AdminDashboardPage() {
     setError(null);
 
     try {
-      const token = getClientToken();
-      const authHeader = token ? { Authorization: `Bearer ${token}` } : {};
-
-      const usersRes = await fetch("http://localhost:5000/api/admin/users/", {
-        credentials: "include",
-        headers: {
-          "Content-Type": "application/json",
-          ...authHeader,
-        },
-        mode: "cors",
-      });
-
-      if (!usersRes.ok) throw new Error("Failed to fetch users");
-
-      const usersData = await usersRes.json();
-      setUsers(Array.isArray(usersData) ? usersData : usersData.data || []);
+      const usersData = await listAdminUsers();
+      setUsers(usersData as User[]);
 
       try {
-        const bookingEndpoints = [
-          "http://localhost:5000/api/bookings",
-          "http://localhost:5000/api/bookings/",
-          "http://localhost:5000/api/bookings/all",
-          "http://localhost:5000/api/bookings/admin",
-          "http://localhost:5000/api/bookings/me",
-          "http://localhost:5000/api/admin/bookings",
-          "http://localhost:5000/api/admin/bookings/",
-          "http://localhost:5000/api/admin/bookings/all",
-          "http://localhost:5000/api/admin/booking",
-        ];
-
-        let resolved: Booking[] = [];
-
-        for (const endpoint of bookingEndpoints) {
-          const bookingsRes = await fetch(endpoint, {
-            credentials: "include",
-            headers: {
-              "Content-Type": "application/json",
-              ...authHeader,
-            },
-            mode: "cors",
-          });
-
-          if (!bookingsRes.ok) continue;
-
-          const bookingsData = await bookingsRes.json();
-          const candidate = extractArrayFromPayload(bookingsData);
-          if (candidate.length > resolved.length) resolved = candidate;
-          if (resolved.length > 0) break;
-        }
-
-        setBookings(resolved);
+        const bookingData = await listAdminBookings();
+        setBookings(bookingData as Booking[]);
       } catch {
         setBookings([]);
       }
@@ -200,7 +99,10 @@ export default function AdminDashboardPage() {
   const userCount = users.filter((u) => u.role.toLowerCase() === "user").length;
   const workerCount = users.filter((u) => u.role.toLowerCase() === "worker").length;
   const totalBookings = bookings.length;
-  const pendingBookings = bookings.filter((b) => (b.status || "").toLowerCase() === "pending").length;
+  const pendingBookings = bookings.filter((b) => {
+    const s = (b.status || "").toLowerCase();
+    return s === "pending" || s === "pending_payment";
+  }).length;
   const acceptedBookings = bookings.filter((b) => (b.status || "").toLowerCase() === "accepted").length;
   const completedBookings = bookings.filter((b) => (b.status || "").toLowerCase() === "completed").length;
   const cancelledBookings = bookings.filter((b) => (b.status || "").toLowerCase() === "cancelled").length;

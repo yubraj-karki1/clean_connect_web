@@ -2,28 +2,13 @@
 
 import { useEffect, useMemo, useState } from "react";
 import AdminLayout from "../users/AdminLayout";
-
-function getCookie(name: string) {
-  if (typeof document === "undefined") return null;
-  const value = `; ${document.cookie}`;
-  const parts = value.split(`; ${name}=`);
-  if (parts.length === 2) return parts.pop()?.split(";").shift() || null;
-  return null;
-}
-
-function getClientToken() {
-  const fromCookie = getCookie("auth_token") || getCookie("token");
-  if (fromCookie) return fromCookie;
-  if (typeof window !== "undefined") {
-    return localStorage.getItem("token");
-  }
-  return null;
-}
+import { deleteAdminBooking, listAdminBookings, updateAdminBookingStatus } from "@/lib/api/admin";
 
 type EntityRef = string | { _id?: string; fullName?: string; email?: string; title?: string; line1?: string; city?: string; state?: string; zip?: string };
 
 interface Booking {
   _id: string;
+  _isSyntheticId?: boolean;
   status?: string;
   startAt?: string;
   durationHours?: number;
@@ -35,49 +20,14 @@ interface Booking {
   addressId?: EntityRef;
 }
 
-function isBookingLike(value: unknown): value is Booking {
-  if (!value || typeof value !== "object") return false;
-  const obj = value as Record<string, unknown>;
-  return typeof obj._id === "string" || typeof obj.status === "string" || "serviceId" in obj || "userId" in obj;
-}
-
-function findBookingArrayDeep(value: unknown): Booking[] {
-  if (Array.isArray(value)) {
-    return value.some(isBookingLike) ? (value as Booking[]) : [];
-  }
-  if (!value || typeof value !== "object") return [];
-  for (const nested of Object.values(value as Record<string, unknown>)) {
-    const found = findBookingArrayDeep(nested);
-    if (found.length) return found;
-  }
-  return [];
-}
-
-function extractArrayFromPayload(payload: unknown): Booking[] {
-  if (Array.isArray(payload)) return payload.some(isBookingLike) ? (payload as Booking[]) : [];
-  if (!payload || typeof payload !== "object") return [];
-
-  const obj = payload as Record<string, unknown>;
-  const candidates = [
-    obj.data,
-    obj.bookings,
-    obj.results,
-    obj.items,
-    (obj.data as Record<string, unknown> | undefined)?.bookings,
-    (obj.data as Record<string, unknown> | undefined)?.items,
-  ];
-
-  for (const candidate of candidates) {
-    if (Array.isArray(candidate) && candidate.some(isBookingLike)) return candidate as Booking[];
-  }
-
-  return findBookingArrayDeep(payload);
-}
-
 function displayName(value: EntityRef | undefined, fallback = "-") {
   if (!value) return fallback;
   if (typeof value === "string") return value;
   return value.fullName || value.email || value.title || value._id || fallback;
+}
+
+function normalizeStatus(status?: string) {
+  return (status || "").toLowerCase().replace(/\s+/g, "_").replace(/-/g, "_");
 }
 
 function formatStatus(status?: string) {
@@ -107,48 +57,8 @@ export default function AdminBookingsPage() {
     setLoading(true);
     setError(null);
     try {
-      const token = getClientToken();
-      const requestHeaders: Record<string, string> = {
-        "Content-Type": "application/json",
-      };
-      if (token) {
-        requestHeaders.Authorization = `Bearer ${token}`;
-      }
-      const bookingEndpoints = [
-        "http://localhost:5000/api/bookings",
-        "http://localhost:5000/api/bookings/",
-        "http://localhost:5000/api/bookings/all",
-        "http://localhost:5000/api/bookings/admin",
-        "http://localhost:5000/api/bookings/me",
-        "http://localhost:5000/api/admin/bookings",
-        "http://localhost:5000/api/admin/bookings/",
-        "http://localhost:5000/api/admin/bookings/all",
-        "http://localhost:5000/api/admin/booking",
-      ];
-
-      let resolved: Booking[] = [];
-      let hasSuccessfulResponse = false;
-
-      for (const endpoint of bookingEndpoints) {
-        const res = await fetch(endpoint, {
-          credentials: "include",
-          headers: requestHeaders,
-          mode: "cors",
-        });
-
-        if (!res.ok) continue;
-        hasSuccessfulResponse = true;
-
-        const data = await res.json();
-        const candidate = extractArrayFromPayload(data);
-        if (candidate.length > resolved.length) resolved = candidate;
-        if (resolved.length > 0) break;
-      }
-
-      setBookings(resolved);
-      if (!hasSuccessfulResponse) {
-        setError("Unable to load bookings from available endpoints.");
-      }
+      const data = await listAdminBookings();
+      setBookings(data as Booking[]);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Failed to fetch bookings");
     } finally {
@@ -175,8 +85,9 @@ export default function AdminBookingsPage() {
 
   const filteredBookings = useMemo(() => {
     return bookings.filter((booking) => {
-      const normalizedStatus = (booking.status || "").toLowerCase();
-      const statusMatch = statusFilter === "all" || normalizedStatus === statusFilter;
+      const normalizedStatus = normalizeStatus(booking.status);
+      const normalizedFilter = normalizeStatus(statusFilter);
+      const statusMatch = normalizedFilter === "all" || normalizedStatus === normalizedFilter;
       if (!statusMatch) return false;
 
       const q = search.trim().toLowerCase();
@@ -199,33 +110,7 @@ export default function AdminBookingsPage() {
   const updateStatus = async (id: string, status: string) => {
     setUpdatingId(id);
     try {
-      const token = getCookie("auth_token") || getCookie("token");
-      const payload = JSON.stringify({ status });
-
-      const patchRes = await fetch(`http://localhost:5000/api/bookings/${id}`, {
-        method: "PATCH",
-        credentials: "include",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: token ? `Bearer ${token}` : "",
-        },
-        mode: "cors",
-        body: payload,
-      });
-
-      if (!patchRes.ok) {
-        const putRes = await fetch(`http://localhost:5000/api/bookings/${id}`, {
-          method: "PUT",
-          credentials: "include",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: token ? `Bearer ${token}` : "",
-          },
-          mode: "cors",
-          body: payload,
-        });
-        if (!putRes.ok) throw new Error("Failed to update booking status");
-      }
+      await updateAdminBookingStatus(id, status);
 
       setBookings((prev) =>
         prev.map((booking) =>
@@ -243,18 +128,7 @@ export default function AdminBookingsPage() {
     if (!confirm("Delete this booking? This action cannot be undone.")) return;
     setUpdatingId(id);
     try {
-      const token = getCookie("auth_token") || getCookie("token");
-      const res = await fetch(`http://localhost:5000/api/bookings/${id}`, {
-        method: "DELETE",
-        credentials: "include",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: token ? `Bearer ${token}` : "",
-        },
-        mode: "cors",
-      });
-
-      if (!res.ok) throw new Error("Failed to delete booking");
+      await deleteAdminBooking(id);
 
       setBookings((prev) => prev.filter((booking) => booking._id !== id));
     } catch (err: unknown) {
@@ -265,10 +139,13 @@ export default function AdminBookingsPage() {
   };
 
   const pendingCount = bookings.filter(
-    (booking) => (booking.status || "").toLowerCase() === "pending"
+    (booking) => {
+      const s = normalizeStatus(booking.status);
+      return s === "pending" || s === "pending_payment";
+    }
   ).length;
   const completedCount = bookings.filter(
-    (booking) => (booking.status || "").toLowerCase() === "completed"
+    (booking) => normalizeStatus(booking.status) === "completed"
   ).length;
 
   return (
@@ -326,6 +203,7 @@ export default function AdminBookingsPage() {
             >
               <option value="all">All statuses</option>
               <option value="pending">Pending</option>
+              <option value="pending_payment">Pending Payment</option>
               <option value="accepted">Accepted</option>
               <option value="in-progress">In Progress</option>
               <option value="completed">Completed</option>
@@ -368,11 +246,18 @@ export default function AdminBookingsPage() {
                 ) : (
                   filteredBookings.map((booking) => {
                     const isBusy = updatingId === booking._id;
+                    const canMutate = !booking._isSyntheticId;
+                    const currentStatus = normalizeStatus(booking.status);
+                    const canAccept = canMutate && ["pending", "pending_payment"].includes(currentStatus);
+                    const canComplete = canMutate && ["accepted", "in_progress", "inprogress"].includes(currentStatus);
+                    const canCancel = canMutate && !["completed", "cancelled"].includes(currentStatus);
                     return (
                       <tr key={booking._id} className="border-b border-slate-100 text-sm dark:border-slate-800">
                         <td className="px-4 py-3">
                           <div className="font-medium text-slate-800 dark:text-slate-100">{displayName(booking.serviceId)}</div>
-                          <div className="text-xs text-slate-500 dark:text-slate-400">{booking._id}</div>
+                          <div className="text-xs text-slate-500 dark:text-slate-400">
+                            {booking._isSyntheticId ? "ID unavailable" : booking._id}
+                          </div>
                         </td>
                         <td className="px-4 py-3 text-slate-700 dark:text-slate-300">{displayName(booking.userId)}</td>
                         <td className="px-4 py-3 text-slate-700 dark:text-slate-300">{displayName(booking.workerId, "Unassigned")}</td>
@@ -388,7 +273,7 @@ export default function AdminBookingsPage() {
                           <div className="flex flex-wrap gap-2">
                             <button
                               type="button"
-                              disabled={isBusy}
+                              disabled={isBusy || !canAccept}
                               onClick={() => updateStatus(booking._id, "accepted")}
                               className="rounded bg-blue-100 px-2.5 py-1 text-xs font-semibold text-blue-700 hover:bg-blue-200 disabled:opacity-60"
                             >
@@ -396,7 +281,7 @@ export default function AdminBookingsPage() {
                             </button>
                             <button
                               type="button"
-                              disabled={isBusy}
+                              disabled={isBusy || !canComplete}
                               onClick={() => updateStatus(booking._id, "completed")}
                               className="rounded bg-emerald-100 px-2.5 py-1 text-xs font-semibold text-emerald-700 hover:bg-emerald-200 disabled:opacity-60"
                             >
@@ -404,7 +289,7 @@ export default function AdminBookingsPage() {
                             </button>
                             <button
                               type="button"
-                              disabled={isBusy}
+                              disabled={isBusy || !canCancel}
                               onClick={() => updateStatus(booking._id, "cancelled")}
                               className="rounded bg-amber-100 px-2.5 py-1 text-xs font-semibold text-amber-700 hover:bg-amber-200 disabled:opacity-60"
                             >
@@ -412,7 +297,7 @@ export default function AdminBookingsPage() {
                             </button>
                             <button
                               type="button"
-                              disabled={isBusy}
+                              disabled={isBusy || !canMutate}
                               onClick={() => deleteBooking(booking._id)}
                               className="rounded bg-rose-100 px-2.5 py-1 text-xs font-semibold text-rose-700 hover:bg-rose-200 disabled:opacity-60"
                             >

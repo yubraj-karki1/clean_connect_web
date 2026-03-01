@@ -2,6 +2,7 @@
 
 import { X, CalendarDays, MapPin, Sparkles, Phone } from "lucide-react";
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { createBooking, getServices } from "@/lib/api/booking";
 
 type Props = {
@@ -49,6 +50,16 @@ export default function BookCleaningModal({ open, onClose, selectedService }: Pr
     getServices().then(res => {
       setServices(res.data || []);
     }).catch(() => setServices([]));
+  }, [open]);
+
+  // Prevent background page scroll while modal is open
+  useEffect(() => {
+    if (!open) return;
+    const originalOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = originalOverflow;
+    };
   }, [open]);
 
   if (!open) return null;
@@ -105,25 +116,25 @@ export default function BookCleaningModal({ open, onClose, selectedService }: Pr
     }
   };
 
-  return (
+  const modalContent = (
     <div className="fixed inset-0 z-[999] flex items-center justify-center">
       {/* Backdrop */}
       <div
-        className="absolute inset-0 bg-black/30"
+        className="absolute inset-0 bg-slate-950/45 backdrop-blur-[1px]"
         onClick={onClose}
       />
 
       {/* Modal */}
-      <div className="relative z-10 w-[98vw] max-w-2xl rounded-2xl bg-white shadow-xl border">
+      <div className="relative z-10 max-h-[92vh] w-[98vw] max-w-2xl overflow-y-auto rounded-2xl border border-slate-200 bg-white shadow-2xl">
         {/* Header */}
-        <div className="flex items-start justify-between p-5 border-b">
+        <div className="flex items-start justify-between border-b border-slate-200 bg-slate-50/80 p-5">
           <div className="flex items-start gap-3">
-            <div className="h-9 w-9 rounded-xl bg-emerald-100 flex items-center justify-center">
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-100">
               <Sparkles className="text-emerald-600" size={18} />
             </div>
             <div>
-              <h2 className="text-lg font-bold">Book a Cleaning</h2>
-              <p className="text-sm text-gray-500">
+              <h2 className="text-lg font-bold text-slate-900">Book a Cleaning</h2>
+              <p className="text-sm text-slate-600">
                 Fill in the details below to schedule your cleaning service.
               </p>
             </div>
@@ -132,22 +143,22 @@ export default function BookCleaningModal({ open, onClose, selectedService }: Pr
           <button
             type="button"
             onClick={onClose}
-            className="h-9 w-9 rounded-full hover:bg-gray-100 flex items-center justify-center"
+            className="flex h-9 w-9 items-center justify-center rounded-full text-slate-500 transition hover:bg-slate-200/70 hover:text-slate-700"
           >
             <X size={18} />
           </button>
         </div>
 
         {/* Body */}
-        <form className="p-5 space-y-4" onSubmit={handleSubmit}>
+        <form className="space-y-4 p-5 sm:space-y-5" onSubmit={handleSubmit}>
           {/* Service Type */}
           <div>
-            <label className="text-sm font-semibold">
+            <label className="text-sm font-semibold text-slate-700">
               Service Type <span className="text-red-500">*</span>
             </label>
             <select
               required
-              className="mt-2 w-full rounded-xl border px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-emerald-400"
+              className="mt-2 w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm font-medium text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200"
               value={serviceType}
               onChange={e => setServiceType(e.target.value)}
               disabled={services.length === 0}
@@ -161,13 +172,13 @@ export default function BookCleaningModal({ open, onClose, selectedService }: Pr
 
           {/* Phone Number */}
           <div>
-            <label className="text-sm font-semibold">
+            <label className="text-sm font-semibold text-slate-700">
               Phone Number <span className="text-red-500">*</span>
             </label>
             <div className="mt-2 relative">
               <Phone
                 size={18}
-                className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"
+                className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"
               />
               <input
                 type="tel"
@@ -182,10 +193,10 @@ export default function BookCleaningModal({ open, onClose, selectedService }: Pr
                   if (value.length === 10) setPhoneError("");
                 }}
                 placeholder="9876543210"
-                className={`w-full rounded-xl border pl-11 pr-4 py-3 text-sm outline-none focus:ring-2 ${
+                className={`w-full rounded-xl border bg-white pl-11 pr-4 py-3 text-sm font-medium text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-emerald-500 focus:ring-2 ${
                   phoneError
-                    ? "border-red-500 focus:ring-red-400"
-                    : "focus:ring-emerald-400"
+                    ? "border-red-500 focus:ring-red-200"
+                    : "border-slate-300 focus:ring-emerald-200"
                 }`}
               />
             </div>
@@ -197,32 +208,32 @@ export default function BookCleaningModal({ open, onClose, selectedService }: Pr
 
           {/* Date */}
           <div>
-            <label className="text-sm font-semibold">
+            <label className="text-sm font-semibold text-slate-700">
               Date <span className="text-red-500">*</span>
             </label>
             <div className="mt-2 relative">
               <CalendarDays
                 size={18}
-                className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"
+                className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"
               />
               <input
                 type="date"
                 required
                 value={date}
                 onChange={e => setDate(e.target.value)}
-                className="w-full rounded-xl border pl-11 pr-4 py-3 text-sm outline-none focus:ring-2 focus:ring-emerald-400"
+                className="w-full rounded-xl border border-slate-300 bg-white pl-11 pr-4 py-3 text-sm font-medium text-slate-900 outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200"
               />
             </div>
           </div>
 
           {/* Time */}
           <div>
-            <label className="text-sm font-semibold">
+            <label className="text-sm font-semibold text-slate-700">
               Time <span className="text-red-500">*</span>
             </label>
             <select
               required
-              className="mt-2 w-full rounded-xl border px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-emerald-400"
+              className="mt-2 w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm font-medium text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200"
               value={time}
               onChange={e => setTime(e.target.value)}
             >
@@ -239,13 +250,13 @@ export default function BookCleaningModal({ open, onClose, selectedService }: Pr
 
           {/* Address */}
           <div>
-            <label className="text-sm font-semibold">
+            <label className="text-sm font-semibold text-slate-700">
               Address <span className="text-red-500">*</span>
             </label>
             <div className="mt-2 relative">
               <MapPin
                 size={18}
-                className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"
+                className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"
               />
               <input
                 type="text"
@@ -253,17 +264,17 @@ export default function BookCleaningModal({ open, onClose, selectedService }: Pr
                 value={address}
                 onChange={e => setAddress(e.target.value)}
                 placeholder="23 Main Street, Apt 4B"
-                className="w-full rounded-xl border pl-11 pr-4 py-3 text-sm outline-none focus:ring-2 focus:ring-emerald-400"
+                className="w-full rounded-xl border border-slate-300 bg-white pl-11 pr-4 py-3 text-sm font-medium text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200"
               />
             </div>
           </div>
 
           {/* Submit */}
-          {error && <p className="text-red-500 text-sm text-center">{error}</p>}
-          {success && <p className="text-green-600 text-sm text-center">{success}</p>}
+          {error && <p className="text-center text-sm font-medium text-red-600">{error}</p>}
+          {success && <p className="text-center text-sm font-medium text-emerald-700">{success}</p>}
           <button
             type="submit"
-            className="w-full rounded-xl bg-emerald-500 py-3 text-sm font-semibold text-white shadow hover:bg-emerald-600 disabled:opacity-60"
+            className="w-full rounded-xl bg-emerald-600 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-60"
             disabled={loading || services.length === 0}
           >
             {services.length === 0 ? "No services to book" : (loading ? "Booking..." : "Confirm Booking")}
@@ -272,4 +283,6 @@ export default function BookCleaningModal({ open, onClose, selectedService }: Pr
       </div>
     </div>
   );
+
+  return createPortal(modalContent, document.body);
 }

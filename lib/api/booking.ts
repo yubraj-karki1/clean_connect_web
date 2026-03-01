@@ -16,6 +16,11 @@ export const getMyBookings = async () => {
   return res.data;
 };
 
+export const deleteBooking = async (bookingId: string) => {
+  const res = await axios.delete(`/api/bookings/${bookingId}`);
+  return res.data;
+};
+
 /** Get ALL bookings (admin/general) — used as fallback */
 export const getAllBookings = async () => {
   const res = await axios.get("/api/bookings");

@@ -12,6 +12,14 @@ const axiosInstance = axios.create({
   withCredentials: true, // keep true if you use cookies for auth
 });
 
+const readCookieToken = () => {
+  if (typeof document === "undefined") return null;
+  const cookie = document.cookie || "";
+  const parts = cookie.split("; ").find((c) => c.startsWith("auth_token=") || c.startsWith("token="));
+  if (!parts) return null;
+  return parts.split("=").slice(1).join("=") || null;
+};
+
 axiosInstance.interceptors.request.use((config: InternalAxiosRequestConfig) => {
   // Ensure headers is always an AxiosHeaders instance
   const headers = AxiosHeaders.from(config.headers);
@@ -31,8 +39,10 @@ axiosInstance.interceptors.request.use((config: InternalAxiosRequestConfig) => {
 
   // OPTIONAL: if your backend uses Bearer token from localStorage
   // (skip this if you use httpOnly cookies only)
-  const token =
+  const storageToken =
     typeof window !== "undefined" ? localStorage.getItem("token") : null;
+  const cookieToken = readCookieToken();
+  const token = storageToken || cookieToken;
 
   if (token) {
     headers.set("Authorization", `Bearer ${token}`);

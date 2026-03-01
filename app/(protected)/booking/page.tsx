@@ -2,10 +2,10 @@
 
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { CalendarDays, Home, Calendar, Heart, User, Clock3, MapPin, Sun, Moon } from "lucide-react";
+import { CalendarDays, Home, Calendar, Heart, User, Clock3, MapPin, Sun, Moon, Trash2 } from "lucide-react";
 import { useState, useEffect } from "react";
 import BookCleaningModal from "./BookCleaningModal";
-import { getMyBookings } from "@/lib/api/booking";
+import { deleteBooking, getMyBookings } from "@/lib/api/booking";
 
 export default function BookingPage() {
   const router = useRouter();
@@ -13,6 +13,8 @@ export default function BookingPage() {
   const [bookings, setBookings] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [deleteError, setDeleteError] = useState("");
+  const [deletingId, setDeletingId] = useState<string | null>(null);
   const [theme, setTheme] = useState<"light" | "dark">("light");
 
   const formatStatus = (status?: string) => {
@@ -65,6 +67,23 @@ export default function BookingPage() {
     setTheme(nextTheme);
     localStorage.setItem("theme", nextTheme);
     document.documentElement.classList.toggle("dark", nextTheme === "dark");
+  };
+
+  const handleDeleteBooking = async (bookingId?: string) => {
+    if (!bookingId) return;
+    const confirmed = window.confirm("Delete this booking? This action cannot be undone.");
+    if (!confirmed) return;
+
+    setDeletingId(bookingId);
+    setDeleteError("");
+    try {
+      await deleteBooking(bookingId);
+      setBookings((prev) => prev.filter((b) => b?._id !== bookingId));
+    } catch (err: any) {
+      setDeleteError(err?.response?.data?.message || err.message || "Failed to delete booking");
+    } finally {
+      setDeletingId(null);
+    }
   };
 
   return (
@@ -165,6 +184,11 @@ export default function BookingPage() {
           <div className="mt-5 inline-flex items-center rounded-full bg-gradient-to-r from-emerald-100 to-cyan-100 px-4 py-1.5 text-sm font-semibold text-emerald-800 ring-1 ring-emerald-200/80 dark:from-emerald-900/60 dark:to-cyan-900/60 dark:text-emerald-200 dark:ring-emerald-700/70">
             {bookings.length} total booking{bookings.length === 1 ? "" : "s"}
           </div>
+          {deleteError && (
+            <p className="mt-4 rounded-xl border border-rose-200 bg-rose-50 px-4 py-2 text-sm font-medium text-rose-700 dark:border-rose-900/60 dark:bg-rose-900/30 dark:text-rose-200">
+              {deleteError}
+            </p>
+          )}
         </div>
 
         {loading ? (
@@ -244,8 +268,19 @@ export default function BookingPage() {
                 </div>
 
                 <div className="mt-5 h-px bg-slate-200/70" />
-                <div className="mt-4 text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">
-                  Booking #{idx + 1}
+                <div className="mt-4 flex items-center justify-between gap-3">
+                  <div className="text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                    Booking #{idx + 1}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => handleDeleteBooking(booking._id)}
+                    disabled={!booking._id || deletingId === booking._id}
+                    className="inline-flex items-center gap-1.5 rounded-lg border border-rose-200 bg-rose-50 px-2.5 py-1.5 text-xs font-semibold text-rose-700 transition hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-60 dark:border-rose-900/60 dark:bg-rose-900/30 dark:text-rose-200 dark:hover:bg-rose-900/50"
+                  >
+                    <Trash2 size={14} />
+                    {deletingId === booking._id ? "Deleting..." : "Delete"}
+                  </button>
                 </div>
               </article>
             ))}
