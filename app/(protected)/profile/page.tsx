@@ -33,6 +33,44 @@ type User = {
 
 type MessageState = { text: string; type: "ok" | "err" } | null;
 
+const getPayloadData = (payload: any) =>
+  payload?.data?.data ||
+  payload?.data?.user ||
+  payload?.user ||
+  payload?.data ||
+  payload;
+
+const pickString = (...values: any[]) => {
+  for (const value of values) {
+    if (typeof value !== "string") continue;
+    const cleaned = value.trim();
+    if (!cleaned) continue;
+    const normalized = cleaned.toLowerCase();
+    if (normalized === "undefined" || normalized === "null" || normalized === "n/a") {
+      continue;
+    }
+    return cleaned;
+  }
+  return "";
+};
+
+const resolveFullName = (source: any) => {
+  if (!source || typeof source !== "object") return "";
+  const combined = [source.firstName, source.lastName]
+    .filter((v) => typeof v === "string" && v.trim())
+    .join(" ")
+    .trim();
+  return pickString(
+    source.fullName,
+    source.full_name,
+    source.name,
+    source.displayName,
+    combined,
+    source.username,
+    source.userName
+  );
+};
+
 const getCountFromPayload = (payload: any): number | null => {
   if (Array.isArray(payload)) return payload.length;
   if (Array.isArray(payload?.data)) return payload.data.length;
@@ -116,6 +154,13 @@ export default function UserProfilePage() {
     async function fetchUser() {
       try {
         let userId: string | null = null;
+        let cookieUserName = "";
+        let cookieUserEmail = "";
+        let cookiePhone = "";
+        let cookieAddress = "";
+        let cookieProfileImage = "";
+        let cookieCreatedAt = "";
+        let cookieUserData: any = null;
 
         try {
           const cookie = document.cookie
@@ -123,23 +168,61 @@ export default function UserProfilePage() {
             .find((row) => row.startsWith("user_data="));
           if (cookie) {
             const userData = JSON.parse(decodeURIComponent(cookie.split("=")[1]));
+            cookieUserData = userData;
             userId = userData.id || userData._id;
+            cookieUserName = resolveFullName(userData);
+            cookieUserEmail = pickString(userData.email);
+            cookiePhone = pickString(userData.phoneNumber, userData.phone);
+            cookieAddress =
+              typeof userData.address === "object"
+                ? [
+                    userData.address?.line1,
+                    userData.address?.city,
+                    userData.address?.state,
+                    userData.address?.zip,
+                  ]
+                    .filter(Boolean)
+                    .join(", ")
+                : pickString(userData.address);
+            cookieProfileImage = pickString(userData.profileImage, userData.image);
+            cookieCreatedAt = pickString(userData.createdAt);
           }
         } catch {}
 
-        if (!userId) {
-          throw new Error("User not found - please log in again.");
+        const token = getClientToken();
+        const headers = token ? { Authorization: `Bearer ${token}` } : undefined;
+        const candidateEndpoints = [
+          "/api/users/me",
+          ...(userId ? [`/api/users/${userId}`] : []),
+          "/api/auth/me",
+        ];
+
+        let profile: any = null;
+        let profilePayload: any = null;
+
+        for (const endpoint of candidateEndpoints) {
+          try {
+            const res = await fetch(endpoint, {
+              credentials: "include",
+              headers,
+            });
+            const data = await parseJsonSafely(res);
+            const extracted = getPayloadData(data);
+
+            if (res.ok && data?.success !== false && extracted && typeof extracted === "object") {
+              profile = extracted;
+              profilePayload = data;
+              break;
+            }
+          } catch {}
         }
 
-        const token = getClientToken();
-        const res = await fetch(`/api/users/${userId}`, {
-          credentials: "include",
-          headers: token ? { Authorization: `Bearer ${token}` } : undefined,
-        });
-        const data = await parseJsonSafely(res);
+        if (!profile && cookieUserData && typeof cookieUserData === "object") {
+          profile = cookieUserData;
+        }
 
-        if (!res.ok || !data?.success) {
-          throw new Error(data?.message || "Failed to load profile");
+        if (!profile) {
+          throw new Error("Failed to load profile");
         }
 
         const [bookingsCount, reviewsCount] = await Promise.all([
@@ -157,7 +240,7 @@ export default function UserProfilePage() {
             }
           })(),
           (async () => {
-            const fromUser = getReviewCountFromUser(data.data);
+            const fromUser = getReviewCountFromUser(profilePayload?.data || profile);
             if (fromUser !== null) return fromUser;
 
             try {
@@ -186,20 +269,36 @@ export default function UserProfilePage() {
         }
 
         setUser({
-          id: data.data._id,
-          fullName: data.data.fullName,
-          email: data.data.email,
-          memberSince: new Date(data.data.createdAt).toLocaleDateString(undefined, {
+          id: profile._id || profile.id || userId,
+          fullName:
+            resolveFullName(profile) ||
+            cookieUserName ||
+            pickString(cookieUserEmail)?.split("@")[0] ||
+            pickString(profile.email)?.split("@")[0] ||
+            "User",
+          email: pickString(profile.email),
+          memberSince: new Date(profile.createdAt || cookieCreatedAt || Date.now()).toLocaleDateString(undefined, {
             year: "numeric",
             month: "long",
             day: "numeric",
           }),
-          phoneNumber: data.data.phoneNumber,
-          address: data.data.address,
+          phoneNumber: pickString(profile.phoneNumber, profile.phone, cookiePhone),
+          address:
+            typeof profile.address === "object"
+              ? [
+                  profile.address?.line1,
+                  profile.address?.city,
+                  profile.address?.state,
+                  profile.address?.zip,
+                ]
+                  .filter(Boolean)
+                  .join(", ")
+              : pickString(profile.address, cookieAddress),
           bookings: bookingsCount,
           favorites: favoritesCount,
           reviews: reviewsCount,
-          profileImage: data.data.profileImage,
+          profileImage:
+            pickString(profile.profileImage, profile.image, cookieProfileImage) || null,
         });
       } catch (err: any) {
         setFetchError(err?.message || "Failed to load profile");
@@ -279,7 +378,22 @@ export default function UserProfilePage() {
       }
 
       setMessage({ text: data?.message || "Profile updated!", type: "ok" });
-      if (data?.data) setUser((prev) => (prev ? { ...prev, ...data.data } : prev));
+      if (data?.data) {
+        const updated = getPayloadData(data);
+        setUser((prev) =>
+          prev
+            ? {
+                ...prev,
+                ...updated,
+                fullName:
+                  resolveFullName(updated) || prev.fullName,
+                email: pickString(updated.email) || prev.email,
+                profileImage:
+                  pickString(updated.profileImage, updated.image) || prev.profileImage || null,
+              }
+            : prev
+        );
+      }
       setImageFile(null);
     } catch {
       setMessage({

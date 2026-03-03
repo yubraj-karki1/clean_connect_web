@@ -15,9 +15,24 @@ const axiosInstance = axios.create({
 const readCookieToken = () => {
   if (typeof document === "undefined") return null;
   const cookie = document.cookie || "";
-  const parts = cookie.split("; ").find((c) => c.startsWith("auth_token=") || c.startsWith("token="));
-  if (!parts) return null;
-  return parts.split("=").slice(1).join("=") || null;
+  const parts = cookie
+    .split(";")
+    .map((part) => part.trim())
+    .filter(Boolean);
+
+  const tokenEntry = parts.find(
+    (entry) => entry.startsWith("auth_token=") || entry.startsWith("token=")
+  );
+  if (!tokenEntry) return null;
+
+  const raw = tokenEntry.split("=").slice(1).join("=");
+  if (!raw) return null;
+
+  try {
+    return decodeURIComponent(raw);
+  } catch {
+    return raw;
+  }
 };
 
 axiosInstance.interceptors.request.use((config: InternalAxiosRequestConfig) => {
