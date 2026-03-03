@@ -87,7 +87,7 @@ export default function RegisterPage({ role = "user" }: RegisterPageProps) {
 
   /* Helper to build input wrapper classes */
   const inputWrapperClass = (fieldName: string) =>
-    `flex items-center gap-3 rounded-xl border px-4 py-3.5 transition-all duration-300 ${
+    `flex items-center gap-3 rounded-xl border px-4 py-4 transition-all duration-300 ${
       errors[fieldName as keyof typeof errors]
         ? "border-red-500/60 bg-red-500/5"
         : focusedField === fieldName
@@ -176,11 +176,11 @@ export default function RegisterPage({ role = "user" }: RegisterPageProps) {
         {/* Subtle glow */}
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 h-[450px] w-[450px] rounded-full bg-teal-500/5 blur-[100px] pointer-events-none" />
 
-        <div className="relative w-full max-w-md space-y-6 animate-fade-in-up">
+        <div className="relative w-full max-w-lg space-y-6 animate-fade-in-up">
           {/* Back link */}
           <Link
             href="/"
-            className="group inline-flex items-center gap-2 text-sm text-gray-400 transition-colors hover:text-teal-400"
+            className="group inline-flex items-center gap-2 text-base text-gray-400 transition-colors hover:text-teal-400"
           >
             <ArrowLeft
               size={16}
@@ -190,7 +190,7 @@ export default function RegisterPage({ role = "user" }: RegisterPageProps) {
           </Link>
 
           {/* Card */}
-          <div className="rounded-3xl border border-white/[0.08] bg-gradient-to-b from-white/[0.06] to-white/[0.02] p-8 shadow-2xl shadow-black/40 backdrop-blur-xl">
+          <div className="rounded-3xl border border-white/[0.08] bg-gradient-to-b from-white/[0.06] to-white/[0.02] p-9 md:p-10 shadow-2xl shadow-black/40 backdrop-blur-xl">
             {/* Mobile logo */}
             <div className="flex justify-center lg:hidden mb-5">
               <Image
@@ -202,11 +202,11 @@ export default function RegisterPage({ role = "user" }: RegisterPageProps) {
               />
             </div>
 
-            <div className="text-center space-y-1 mb-6">
-              <h2 className="text-2xl font-bold tracking-tight">
+            <div className="mb-7 space-y-2 text-center">
+              <h2 className="text-3xl font-bold tracking-tight">
                 {isWorker ? "Register as a Worker" : "Create your account"}
               </h2>
-              <p className="text-sm text-gray-400">
+              <p className="text-base text-gray-400">
                 {isWorker
                   ? "Sign up to start accepting cleaning jobs"
                   : "Fill in your details to get started"}
@@ -238,7 +238,7 @@ export default function RegisterPage({ role = "user" }: RegisterPageProps) {
 
               {/* Full Name */}
               <div className="space-y-1.5">
-                <label className="text-sm font-medium text-gray-300">
+                <label className="text-base font-medium text-gray-300">
                   Full Name
                 </label>
                 <div className={inputWrapperClass("fullName")}>
@@ -248,7 +248,7 @@ export default function RegisterPage({ role = "user" }: RegisterPageProps) {
                     placeholder="John Doe"
                     onFocus={() => setFocusedField("fullName")}
                     onBlur={() => setFocusedField(null)}
-                    className="w-full bg-transparent text-white outline-none placeholder:text-gray-600 text-sm"
+                    className="w-full bg-transparent text-base text-white outline-none placeholder:text-gray-600"
                   />
                 </div>
                 {errors.fullName && (
@@ -260,7 +260,7 @@ export default function RegisterPage({ role = "user" }: RegisterPageProps) {
 
               {/* Email */}
               <div className="space-y-1.5">
-                <label className="text-sm font-medium text-gray-300">
+                <label className="text-base font-medium text-gray-300">
                   Email Address
                 </label>
                 <div className={inputWrapperClass("email")}>
@@ -271,7 +271,7 @@ export default function RegisterPage({ role = "user" }: RegisterPageProps) {
                     placeholder="you@example.com"
                     onFocus={() => setFocusedField("email")}
                     onBlur={() => setFocusedField(null)}
-                    className="w-full bg-transparent text-white outline-none placeholder:text-gray-600 text-sm"
+                    className="w-full bg-transparent text-base text-white outline-none placeholder:text-gray-600"
                   />
                 </div>
                 {errors.email && (
@@ -285,7 +285,7 @@ export default function RegisterPage({ role = "user" }: RegisterPageProps) {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {/* Phone */}
                 <div className="space-y-1.5">
-                  <label className="text-sm font-medium text-gray-300">
+                  <label className="text-base font-medium text-gray-300">
                     Phone
                   </label>
                   <div className={inputWrapperClass("phoneNumber")}>
@@ -296,7 +296,7 @@ export default function RegisterPage({ role = "user" }: RegisterPageProps) {
                       placeholder="9800000000"
                       onFocus={() => setFocusedField("phoneNumber")}
                       onBlur={() => setFocusedField(null)}
-                      className="w-full bg-transparent text-white outline-none placeholder:text-gray-600 text-sm"
+                      className="w-full bg-transparent text-base text-white outline-none placeholder:text-gray-600"
                     />
                   </div>
                   {errors.phoneNumber && (
@@ -308,7 +308,7 @@ export default function RegisterPage({ role = "user" }: RegisterPageProps) {
 
                 {/* Address */}
                 <div className="space-y-1.5">
-                  <label className="text-sm font-medium text-gray-300">
+                  <label className="text-base font-medium text-gray-300">
                     Address
                   </label>
                   <div className={inputWrapperClass("address")}>
@@ -318,7 +318,7 @@ export default function RegisterPage({ role = "user" }: RegisterPageProps) {
                       placeholder="Kathmandu"
                       onFocus={() => setFocusedField("address")}
                       onBlur={() => setFocusedField(null)}
-                      className="w-full bg-transparent text-white outline-none placeholder:text-gray-600 text-sm"
+                      className="w-full bg-transparent text-base text-white outline-none placeholder:text-gray-600"
                     />
                   </div>
                   {errors.address && (
@@ -331,7 +331,7 @@ export default function RegisterPage({ role = "user" }: RegisterPageProps) {
 
               {/* Password */}
               <div className="space-y-1.5">
-                <label className="text-sm font-medium text-gray-300">
+                <label className="text-base font-medium text-gray-300">
                   Password
                 </label>
                 <div className={inputWrapperClass("password")}>
@@ -342,7 +342,7 @@ export default function RegisterPage({ role = "user" }: RegisterPageProps) {
                     placeholder="••••••••"
                     onFocus={() => setFocusedField("password")}
                     onBlur={() => setFocusedField(null)}
-                    className="w-full bg-transparent text-white outline-none placeholder:text-gray-600 text-sm"
+                    className="w-full bg-transparent text-base text-white outline-none placeholder:text-gray-600"
                   />
                   <button
                     type="button"
@@ -361,7 +361,7 @@ export default function RegisterPage({ role = "user" }: RegisterPageProps) {
 
               {/* Confirm Password */}
               <div className="space-y-1.5">
-                <label className="text-sm font-medium text-gray-300">
+                <label className="text-base font-medium text-gray-300">
                   Confirm Password
                 </label>
                 <div className={inputWrapperClass("confirmPassword")}>
@@ -372,7 +372,7 @@ export default function RegisterPage({ role = "user" }: RegisterPageProps) {
                     placeholder="••••••••"
                     onFocus={() => setFocusedField("confirmPassword")}
                     onBlur={() => setFocusedField(null)}
-                    className="w-full bg-transparent text-white outline-none placeholder:text-gray-600 text-sm"
+                    className="w-full bg-transparent text-base text-white outline-none placeholder:text-gray-600"
                   />
                   <button
                     type="button"
@@ -407,7 +407,7 @@ export default function RegisterPage({ role = "user" }: RegisterPageProps) {
                     className="absolute inset-0 m-auto text-teal-400 opacity-0 peer-checked:opacity-100 transition-opacity"
                   />
                 </div>
-                <span className="text-sm text-gray-400 group-hover:text-gray-300 transition-colors leading-snug">
+                <span className="text-base text-gray-400 group-hover:text-gray-300 transition-colors leading-snug">
                   I accept the{" "}
                   <span className="text-teal-400 hover:text-teal-300 cursor-pointer">
                     Terms & Conditions
@@ -424,7 +424,7 @@ export default function RegisterPage({ role = "user" }: RegisterPageProps) {
               <button
                 type="submit"
                 disabled={isSubmitting || isPending}
-                className="group relative w-full overflow-hidden rounded-xl bg-gradient-to-r from-teal-500 to-blue-500 py-3.5 font-semibold text-white shadow-lg shadow-teal-500/20 transition-all duration-300 hover:shadow-teal-500/30 hover:scale-[1.01] active:scale-[0.99] disabled:opacity-60 disabled:hover:scale-100 mt-2"
+                className="group relative mt-2 w-full overflow-hidden rounded-xl bg-gradient-to-r from-teal-500 to-blue-500 py-4 text-lg font-semibold text-white shadow-lg shadow-teal-500/20 transition-all duration-300 hover:shadow-teal-500/30 hover:scale-[1.01] active:scale-[0.99] disabled:opacity-60 disabled:hover:scale-100"
               >
                 {/* Shimmer effect */}
                 <span className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/20 to-transparent transition-transform duration-700 group-hover:translate-x-full" />
@@ -451,7 +451,7 @@ export default function RegisterPage({ role = "user" }: RegisterPageProps) {
             </div>
 
             {/* Sign in */}
-            <p className="text-center text-sm text-gray-400">
+            <p className="text-center text-base text-gray-400">
               Already have an account?{" "}
               <Link
                 href={LOGIN_PATH}
@@ -462,7 +462,7 @@ export default function RegisterPage({ role = "user" }: RegisterPageProps) {
             </p>
 
             {/* Switch role */}
-            <p className="text-center text-sm text-gray-400">
+            <p className="text-center text-base text-gray-400">
               {isWorker ? (
                 <>
                   Want to book a cleaner?{" "}
@@ -488,7 +488,7 @@ export default function RegisterPage({ role = "user" }: RegisterPageProps) {
           </div>
 
           {/* Footer */}
-          <p className="text-center text-xs text-gray-600">
+          <p className="text-center text-sm text-gray-600">
             By creating an account, you agree to our{" "}
             <span className="text-gray-400 hover:text-gray-300 cursor-pointer">
               Terms of Service

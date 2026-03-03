@@ -213,8 +213,9 @@ export default function WorkerDashboardPage() {
 
   return (
     <WorkerLayout>
+      <div className="text-slate-900 dark:text-slate-100">
       {/* ── Hero banner ── */}
-      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-400 text-white p-6 md:p-8 mb-8">
+      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-400 text-white p-6 md:p-8 mb-8 shadow-sm">
         <div className="relative z-10">
           <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight">
             Find Your Next Job 🧹
@@ -246,19 +247,21 @@ export default function WorkerDashboardPage() {
       </div>
 
       {/* ── Dashboard Tab Switcher ── */}
-      <div className="mb-8 flex gap-2 rounded-2xl bg-gray-100 p-1.5 w-fit">
+      <div className="mb-8 flex w-fit gap-2 rounded-2xl bg-emerald-50/70 p-1.5 ring-1 ring-emerald-100 dark:bg-slate-900 dark:ring-slate-700">
         <button
           onClick={() => setDashboardTab("available")}
           className={`flex items-center gap-2 rounded-xl px-5 py-2.5 text-sm font-semibold transition-all ${
             dashboardTab === "available"
-              ? "bg-white text-gray-900 shadow-sm"
-              : "text-gray-500 hover:text-gray-700"
+              ? "bg-white text-gray-900 shadow-sm dark:bg-slate-800 dark:text-slate-100"
+              : "text-gray-500 hover:text-gray-700 dark:text-slate-400 dark:hover:text-slate-200"
           }`}
         >
           <Briefcase size={16} />
           Available Jobs
           <span className={`rounded-full px-2.5 py-0.5 text-[11px] font-bold ${
-            dashboardTab === "available" ? "bg-emerald-100 text-emerald-700" : "bg-gray-200 text-gray-500"
+            dashboardTab === "available"
+              ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-200"
+              : "bg-gray-200 text-gray-500 dark:bg-slate-700 dark:text-slate-300"
           }`}>
             {totalJobs}
           </span>
@@ -267,14 +270,16 @@ export default function WorkerDashboardPage() {
           onClick={() => setDashboardTab("my-bookings")}
           className={`flex items-center gap-2 rounded-xl px-5 py-2.5 text-sm font-semibold transition-all ${
             dashboardTab === "my-bookings"
-              ? "bg-white text-gray-900 shadow-sm"
-              : "text-gray-500 hover:text-gray-700"
+              ? "bg-white text-gray-900 shadow-sm dark:bg-slate-800 dark:text-slate-100"
+              : "text-gray-500 hover:text-gray-700 dark:text-slate-400 dark:hover:text-slate-200"
           }`}
         >
           <ClipboardList size={16} />
           My Bookings
           <span className={`rounded-full px-2.5 py-0.5 text-[11px] font-bold ${
-            dashboardTab === "my-bookings" ? "bg-emerald-100 text-emerald-700" : "bg-gray-200 text-gray-500"
+            dashboardTab === "my-bookings"
+              ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-200"
+              : "bg-gray-200 text-gray-500 dark:bg-slate-700 dark:text-slate-300"
           }`}>
             {myBookings.length}
           </span>
@@ -285,14 +290,14 @@ export default function WorkerDashboardPage() {
       {dashboardTab === "my-bookings" ? (
         <>
           {/* Sub-header */}
-          <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm mb-6">
-            <h2 className="text-xl font-bold text-gray-900">My Bookings</h2>
-            <p className="mt-1 text-sm text-gray-500">Manage your accepted cleaning appointments</p>
+          <div className="mb-6 rounded-2xl border border-gray-200 bg-white p-6 shadow-sm dark:border-slate-700 dark:bg-slate-900">
+            <h2 className="text-xl font-bold text-gray-900 dark:text-slate-100">My Bookings</h2>
+            <p className="mt-1 text-sm text-gray-500 dark:text-slate-300">Manage your accepted cleaning appointments</p>
             <div className="mt-4 flex flex-wrap gap-3">
               <div className="inline-flex items-center rounded-full bg-emerald-50 px-4 py-1.5 text-sm font-semibold text-emerald-700 ring-1 ring-emerald-200">
                 {activeBookings.length} active
               </div>
-              <div className="inline-flex items-center rounded-full bg-gray-100 px-4 py-1.5 text-sm font-semibold text-gray-600 ring-1 ring-gray-200">
+              <div className="inline-flex items-center rounded-full bg-gray-100 px-4 py-1.5 text-sm font-semibold text-gray-600 ring-1 ring-gray-200 dark:bg-slate-800 dark:text-slate-300 dark:ring-slate-700">
                 {completedBookings.length} completed
               </div>
               <div className="inline-flex items-center rounded-full bg-blue-50 px-4 py-1.5 text-sm font-semibold text-blue-700 ring-1 ring-blue-200">
@@ -302,7 +307,7 @@ export default function WorkerDashboardPage() {
           </div>
 
           {myBookingsLoading ? (
-            <div className="flex flex-col items-center justify-center py-20 text-gray-400">
+            <div className="flex flex-col items-center justify-center py-20 text-gray-400 dark:text-slate-400">
               <Loader2 size={32} className="animate-spin mb-3" />
               <span className="text-sm">Loading your bookings…</span>
             </div>
@@ -319,11 +324,11 @@ export default function WorkerDashboardPage() {
             </div>
           ) : myBookings.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-20 text-center">
-              <div className="h-16 w-16 rounded-full bg-gray-100 flex items-center justify-center mb-4">
+              <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-gray-100 dark:bg-slate-800">
                 <ClipboardList size={28} className="text-gray-400" />
               </div>
-              <h2 className="text-lg font-semibold text-gray-700">No bookings yet</h2>
-              <p className="mt-1 text-sm text-gray-400 max-w-sm">
+              <h2 className="text-lg font-semibold text-gray-700 dark:text-slate-100">No bookings yet</h2>
+              <p className="mt-1 max-w-sm text-sm text-gray-400 dark:text-slate-400">
                 Accept jobs from the &quot;Available Jobs&quot; tab to see them here.
               </p>
               <button
@@ -357,8 +362,8 @@ export default function WorkerDashboardPage() {
                 return (
                   <article
                     key={id}
-                    className={`group relative overflow-hidden rounded-2xl border bg-white p-6 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-lg ${
-                      isDone ? "border-emerald-200" : "border-gray-200"
+                    className={`group relative overflow-hidden rounded-2xl border bg-white p-6 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-lg dark:bg-slate-900 ${
+                      isDone ? "border-emerald-200 dark:border-emerald-800/60" : "border-gray-200 dark:border-slate-700"
                     }`}
                   >
                     {/* Top accent bar */}
@@ -371,9 +376,9 @@ export default function WorkerDashboardPage() {
                           {getEmoji(serviceTitle)}
                         </div>
                         <div>
-                          <h3 className="font-semibold text-gray-900 text-sm">{serviceTitle}</h3>
+                          <h3 className="text-sm font-semibold text-gray-900 dark:text-slate-100">{serviceTitle}</h3>
                           {customer && (
-                            <p className="text-xs text-gray-500 flex items-center gap-1 mt-0.5">
+                            <p className="mt-0.5 flex items-center gap-1 text-xs text-gray-500 dark:text-slate-400">
                               <User size={11} />
                               {customer.fullName || customer.email || "Customer"}
                             </p>
@@ -391,15 +396,15 @@ export default function WorkerDashboardPage() {
                     </div>
 
                     {/* Booking details */}
-                    <div className="space-y-2.5 text-sm text-gray-600">
-                      <div className="flex items-center gap-2 rounded-lg bg-gray-50 px-3 py-2">
+                    <div className="space-y-2.5 text-sm text-gray-600 dark:text-slate-300">
+                      <div className="flex items-center gap-2 rounded-lg bg-gray-50 px-3 py-2 dark:bg-slate-800/70">
                         <Calendar className="text-gray-400 shrink-0" size={15} />
-                        <span className="font-medium text-gray-500">Date:</span>
+                        <span className="font-medium text-gray-500 dark:text-slate-400">Date:</span>
                         <span>{booking.startAt ? new Date(booking.startAt).toLocaleDateString() : "-"}</span>
                       </div>
-                      <div className="flex items-center gap-2 rounded-lg bg-gray-50 px-3 py-2">
+                      <div className="flex items-center gap-2 rounded-lg bg-gray-50 px-3 py-2 dark:bg-slate-800/70">
                         <Clock3 className="text-gray-400 shrink-0" size={15} />
-                        <span className="font-medium text-gray-500">Time:</span>
+                        <span className="font-medium text-gray-500 dark:text-slate-400">Time:</span>
                         <span>
                           {booking.startAt
                             ? new Date(booking.startAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
@@ -407,15 +412,15 @@ export default function WorkerDashboardPage() {
                         </span>
                       </div>
                       {booking.durationHours && (
-                        <div className="flex items-center gap-2 rounded-lg bg-gray-50 px-3 py-2">
+                        <div className="flex items-center gap-2 rounded-lg bg-gray-50 px-3 py-2 dark:bg-slate-800/70">
                           <Clock className="text-gray-400 shrink-0" size={15} />
-                          <span className="font-medium text-gray-500">Duration:</span>
+                          <span className="font-medium text-gray-500 dark:text-slate-400">Duration:</span>
                           <span>{booking.durationHours}h</span>
                         </div>
                       )}
-                      <div className="flex items-start gap-2 rounded-lg bg-gray-50 px-3 py-2">
+                      <div className="flex items-start gap-2 rounded-lg bg-gray-50 px-3 py-2 dark:bg-slate-800/70">
                         <MapPin className="mt-0.5 shrink-0 text-gray-400" size={15} />
-                        <span className="font-medium text-gray-500">Address:</span>
+                        <span className="font-medium text-gray-500 dark:text-slate-400">Address:</span>
                         <span className="line-clamp-2">
                           {address && typeof address === "object"
                             ? formatAddress(address)
@@ -423,9 +428,9 @@ export default function WorkerDashboardPage() {
                         </span>
                       </div>
                       {booking.pricing?.total && (
-                        <div className="flex items-center gap-2 rounded-lg bg-gray-50 px-3 py-2">
+                        <div className="flex items-center gap-2 rounded-lg bg-gray-50 px-3 py-2 dark:bg-slate-800/70">
                           <DollarSign className="text-gray-400 shrink-0" size={15} />
-                          <span className="font-medium text-gray-500">Total:</span>
+                          <span className="font-medium text-gray-500 dark:text-slate-400">Total:</span>
                           <span className="font-semibold text-emerald-600">
                             {booking.pricing.currency || "USD"} {booking.pricing.total}
                           </span>
@@ -435,15 +440,15 @@ export default function WorkerDashboardPage() {
 
                     {/* Notes */}
                     {booking.notes && (
-                      <p className="mt-3 text-xs text-gray-500 italic line-clamp-2 bg-gray-50 rounded-lg px-3 py-2">
+                      <p className="mt-3 line-clamp-2 rounded-lg bg-gray-50 px-3 py-2 text-xs italic text-gray-500 dark:bg-slate-800/70 dark:text-slate-400">
                         &ldquo;{booking.notes}&rdquo;
                       </p>
                     )}
 
                     {/* Footer */}
-                    <div className="mt-4 h-px bg-gray-100" />
+                    <div className="mt-4 h-px bg-gray-100 dark:bg-slate-800" />
                     <div className="mt-3 flex items-center justify-between gap-3">
-                      <span className="text-xs font-medium uppercase tracking-wide text-gray-400">
+                      <span className="text-xs font-medium uppercase tracking-wide text-gray-400 dark:text-slate-500">
                         Booking #{idx + 1}
                       </span>
 
@@ -478,10 +483,10 @@ export default function WorkerDashboardPage() {
       {services.length > 0 && (
         <div className="mb-8">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-bold text-gray-900">
+            <h2 className="text-lg font-bold text-gray-900 dark:text-slate-100">
               Cleaning Services
             </h2>
-            <span className="text-xs text-gray-400">
+            <span className="text-xs text-gray-400 dark:text-slate-400">
               Tap to filter by type
             </span>
           </div>
@@ -492,7 +497,7 @@ export default function WorkerDashboardPage() {
               className={`flex items-center gap-2 shrink-0 rounded-2xl border px-5 py-3 text-sm font-semibold transition-all ${
                 activeFilter === "all"
                   ? "border-emerald-500 bg-emerald-50 text-emerald-700 shadow-sm"
-                  : "border-gray-200 bg-white text-gray-600 hover:border-gray-300"
+                  : "border-gray-200 bg-white text-gray-600 hover:border-gray-300 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300"
               }`}
             >
               <span className="text-lg">🧹</span>
@@ -501,7 +506,7 @@ export default function WorkerDashboardPage() {
                 className={`ml-1 rounded-full px-2 py-0.5 text-[11px] font-bold ${
                   activeFilter === "all"
                     ? "bg-emerald-100 text-emerald-700"
-                    : "bg-gray-100 text-gray-500"
+                    : "bg-gray-100 text-gray-500 dark:bg-slate-700 dark:text-slate-300"
                 }`}
               >
                 {jobs.length}
@@ -526,7 +531,7 @@ export default function WorkerDashboardPage() {
                   className={`flex items-center gap-2 shrink-0 rounded-2xl border px-5 py-3 text-sm font-semibold transition-all ${
                     activeFilter === s._id
                       ? "border-emerald-500 bg-emerald-50 text-emerald-700 shadow-sm"
-                      : "border-gray-200 bg-white text-gray-600 hover:border-gray-300"
+                      : "border-gray-200 bg-white text-gray-600 hover:border-gray-300 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300"
                   }`}
                 >
                   <span className="text-lg">{getEmoji(s.title)}</span>
@@ -535,7 +540,7 @@ export default function WorkerDashboardPage() {
                     className={`ml-1 rounded-full px-2 py-0.5 text-[11px] font-bold ${
                       activeFilter === s._id
                         ? "bg-emerald-100 text-emerald-700"
-                        : "bg-gray-100 text-gray-500"
+                        : "bg-gray-100 text-gray-500 dark:bg-slate-700 dark:text-slate-300"
                     }`}
                   >
                     {count}
@@ -549,20 +554,20 @@ export default function WorkerDashboardPage() {
 
       {/* ── Search & actions bar ── */}
       <div className="mb-6 flex flex-col sm:flex-row gap-3">
-        <div className="flex flex-1 items-center gap-3 rounded-xl border bg-white px-4 py-3 shadow-sm focus-within:ring-2 focus-within:ring-emerald-400 transition-all">
-          <Search size={18} className="text-gray-400 shrink-0" />
+        <div className="flex flex-1 items-center gap-3 rounded-xl border bg-white px-4 py-3 shadow-sm focus-within:ring-2 focus-within:ring-emerald-400 transition-all dark:border-slate-700 dark:bg-slate-900">
+          <Search size={18} className="text-gray-400 shrink-0 dark:text-slate-500" />
           <input
             type="text"
             placeholder="Search by service or location…"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full bg-transparent text-sm text-gray-900 outline-none placeholder:text-gray-400"
+            className="w-full bg-transparent text-sm text-gray-900 outline-none placeholder:text-gray-400 dark:text-slate-100 dark:placeholder:text-slate-500"
           />
         </div>
         <button
           onClick={handleRefresh}
           disabled={refreshing}
-          className="flex items-center gap-2 rounded-xl border bg-white px-4 py-3 text-sm font-medium text-gray-600 shadow-sm hover:bg-gray-50 transition-all disabled:opacity-60 shrink-0"
+          className="flex items-center gap-2 rounded-xl border bg-white px-4 py-3 text-sm font-medium text-gray-600 shadow-sm hover:bg-gray-50 transition-all disabled:opacity-60 shrink-0 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800"
         >
           <RefreshCw
             size={16}
@@ -574,7 +579,7 @@ export default function WorkerDashboardPage() {
 
       {/* ── Job listings ── */}
       {loading ? (
-        <div className="flex flex-col items-center justify-center py-20 text-gray-400">
+        <div className="flex flex-col items-center justify-center py-20 text-gray-400 dark:text-slate-400">
           <Loader2 size={32} className="animate-spin mb-3" />
           <span className="text-sm">Loading available jobs…</span>
         </div>
@@ -591,15 +596,15 @@ export default function WorkerDashboardPage() {
         </div>
       ) : filteredJobs.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-20 text-center">
-          <div className="h-16 w-16 rounded-full bg-gray-100 flex items-center justify-center mb-4">
+          <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-gray-100 dark:bg-slate-800">
             <Briefcase size={28} className="text-gray-400" />
           </div>
-          <h2 className="text-lg font-semibold text-gray-700">
+          <h2 className="text-lg font-semibold text-gray-700 dark:text-slate-100">
             {searchQuery || activeFilter !== "all"
               ? "No matching jobs"
               : "No available jobs right now"}
           </h2>
-          <p className="mt-1 text-sm text-gray-400 max-w-sm">
+          <p className="mt-1 max-w-sm text-sm text-gray-400 dark:text-slate-400">
             {searchQuery || activeFilter !== "all"
               ? "Try adjusting your filters or search."
               : "Check back soon — new bookings appear as customers create them."}
@@ -619,9 +624,9 @@ export default function WorkerDashboardPage() {
       ) : (
         <>
           <div className="flex items-center justify-between mb-4">
-            <p className="text-sm text-gray-500">
+            <p className="text-sm text-gray-500 dark:text-slate-400">
               Showing{" "}
-              <span className="font-semibold text-gray-700">
+              <span className="font-semibold text-gray-700 dark:text-slate-100">
                 {filteredJobs.length}
               </span>{" "}
               job{filteredJobs.length !== 1 && "s"}
@@ -678,10 +683,10 @@ export default function WorkerDashboardPage() {
               return (
                 <div
                   key={id}
-                  className={`group relative rounded-2xl border bg-white p-5 shadow-sm transition-all hover:shadow-md ${
+                  className={`group relative rounded-2xl border bg-white p-5 shadow-sm transition-all hover:shadow-md dark:bg-slate-900 ${
                     isSuccess
-                      ? "border-emerald-400 bg-emerald-50"
-                      : "border-gray-200"
+                      ? "border-emerald-400 bg-emerald-50 dark:bg-emerald-900/20"
+                      : "border-gray-200 dark:border-slate-700"
                   }`}
                 >
                   {/* Service header */}
@@ -691,7 +696,7 @@ export default function WorkerDashboardPage() {
                         {getEmoji(serviceTitle)}
                       </div>
                       <div>
-                        <span className="font-semibold text-gray-900 text-sm block">
+                        <span className="block text-sm font-semibold text-gray-900 dark:text-slate-100">
                           {serviceTitle}
                         </span>
                         {service?.price && (
@@ -713,10 +718,10 @@ export default function WorkerDashboardPage() {
                   </div>
 
                   {/* Divider */}
-                  <div className="h-px bg-gray-100 mb-3" />
+                  <div className="mb-3 h-px bg-gray-100 dark:bg-slate-800" />
 
                   {/* Details */}
-                  <div className="space-y-2 text-sm text-gray-600">
+                  <div className="space-y-2 text-sm text-gray-600 dark:text-slate-300">
                     {customerName && (
                       <div className="flex items-center gap-2">
                         <User size={15} className="text-gray-400" />
@@ -774,7 +779,7 @@ export default function WorkerDashboardPage() {
                   </div>
 
                   {job.notes && (
-                    <p className="mt-3 text-xs text-gray-500 italic line-clamp-2 bg-gray-50 rounded-lg px-3 py-2">
+                    <p className="mt-3 line-clamp-2 rounded-lg bg-gray-50 px-3 py-2 text-xs italic text-gray-500 dark:bg-slate-800/70 dark:text-slate-400">
                       &ldquo;{job.notes}&rdquo;
                     </p>
                   )}
@@ -810,7 +815,7 @@ export default function WorkerDashboardPage() {
                       )}
                     </button>
                   ) : (
-                    <div className="mt-4 rounded-xl bg-slate-100 py-2.5 text-center text-sm font-semibold text-slate-600 capitalize">
+                    <div className="mt-4 rounded-xl bg-slate-100 py-2.5 text-center text-sm font-semibold text-slate-600 capitalize dark:bg-slate-800 dark:text-slate-300">
                       {status ? status.replace(/_/g, " ") : "unavailable"}
                     </div>
                   )}
@@ -822,6 +827,7 @@ export default function WorkerDashboardPage() {
       )}
       </>
       )}
+      </div>
     </WorkerLayout>
   );
 }

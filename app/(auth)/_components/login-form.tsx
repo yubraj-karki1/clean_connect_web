@@ -143,11 +143,11 @@ export default function LoginPage() {
         {/* Subtle glow behind the card */}
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 h-[450px] w-[450px] rounded-full bg-teal-500/5 blur-[100px] pointer-events-none" />
 
-        <div className="relative w-full max-w-md space-y-8 animate-fade-in-up">
+        <div className="relative w-full max-w-lg space-y-8 animate-fade-in-up">
           {/* Back link */}
           <Link
             href="/"
-            className="group inline-flex items-center gap-2 text-sm text-gray-400 transition-colors hover:text-teal-400"
+            className="group inline-flex items-center gap-2 text-base text-gray-400 transition-colors hover:text-teal-400"
           >
             <ArrowLeft
               size={16}
@@ -157,7 +157,7 @@ export default function LoginPage() {
           </Link>
 
           {/* Card */}
-          <div className="rounded-3xl border border-white/[0.08] bg-gradient-to-b from-white/[0.06] to-white/[0.02] p-8 shadow-2xl shadow-black/40 backdrop-blur-xl">
+          <div className="rounded-3xl border border-white/[0.08] bg-gradient-to-b from-white/[0.06] to-white/[0.02] p-9 md:p-10 shadow-2xl shadow-black/40 backdrop-blur-xl">
             {/* Mobile logo */}
             <div className="flex justify-center lg:hidden mb-6">
               <Image
@@ -169,11 +169,11 @@ export default function LoginPage() {
               />
             </div>
 
-            <div className="text-center space-y-1 mb-8">
-              <h2 className="text-2xl font-bold tracking-tight">
+            <div className="text-center space-y-2 mb-8">
+              <h2 className="text-3xl font-bold tracking-tight">
                 Welcome back
               </h2>
-              <p className="text-sm text-gray-400">
+              <p className="text-base text-gray-400">
                 Sign in to your account to continue
               </p>
             </div>
@@ -192,7 +192,7 @@ export default function LoginPage() {
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
               {/* Email */}
               <div className="space-y-2">
-                <label className="text-sm font-medium text-gray-300">
+                <label className="text-base font-medium text-gray-300">
                   Email Address
                 </label>
                 <div
@@ -219,7 +219,7 @@ export default function LoginPage() {
                     placeholder="you@example.com"
                     onFocus={() => setFocusedField("email")}
                     onBlur={() => setFocusedField(null)}
-                    className="w-full bg-transparent text-white outline-none placeholder:text-gray-600 text-sm"
+                    className="w-full bg-transparent text-base text-white outline-none placeholder:text-gray-600"
                   />
                 </div>
                 {errors.email && (
@@ -231,7 +231,7 @@ export default function LoginPage() {
 
               {/* Password */}
               <div className="space-y-2">
-                <label className="text-sm font-medium text-gray-300">
+                <label className="text-base font-medium text-gray-300">
                   Password
                 </label>
                 <div
@@ -258,7 +258,7 @@ export default function LoginPage() {
                     placeholder="••••••••"
                     onFocus={() => setFocusedField("password")}
                     onBlur={() => setFocusedField(null)}
-                    className="w-full bg-transparent text-white outline-none placeholder:text-gray-600 text-sm"
+                    className="w-full bg-transparent text-base text-white outline-none placeholder:text-gray-600"
                   />
                   <button
                     type="button"
@@ -283,7 +283,7 @@ export default function LoginPage() {
               <div className="flex justify-end">
                 <Link
                   href="/forget-password"
-                  className="text-sm text-gray-400 transition-colors hover:text-teal-400"
+                  className="text-base text-gray-400 transition-colors hover:text-teal-400"
                 >
                   Forgot password?
                 </Link>
@@ -293,7 +293,7 @@ export default function LoginPage() {
               <button
                 type="submit"
                 disabled={loading}
-                className="group relative w-full overflow-hidden rounded-xl bg-gradient-to-r from-teal-500 to-blue-500 py-3.5 font-semibold text-white shadow-lg shadow-teal-500/20 transition-all duration-300 hover:shadow-teal-500/30 hover:scale-[1.01] active:scale-[0.99] disabled:opacity-60 disabled:hover:scale-100"
+                className="group relative w-full overflow-hidden rounded-xl bg-gradient-to-r from-teal-500 to-blue-500 py-4 text-lg font-semibold text-white shadow-lg shadow-teal-500/20 transition-all duration-300 hover:shadow-teal-500/30 hover:scale-[1.01] active:scale-[0.99] disabled:opacity-60 disabled:hover:scale-100"
               >
                 {/* Hover shimmer */}
                 <span className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/20 to-transparent transition-transform duration-700 group-hover:translate-x-full" />
@@ -320,7 +320,7 @@ export default function LoginPage() {
             </div>
 
             {/* Sign up */}
-            <p className="text-center text-sm text-gray-400">
+            <p className="text-center text-base text-gray-400">
               Don&apos;t have an account?{" "}
               <Link
                 href="/register"
@@ -332,7 +332,7 @@ export default function LoginPage() {
           </div>
 
           {/* Footer text */}
-          <p className="text-center text-xs text-gray-600">
+          <p className="text-center text-sm text-gray-600">
             By signing in, you agree to our{" "}
             <span className="text-gray-400 hover:text-gray-300 cursor-pointer">
               Terms of Service

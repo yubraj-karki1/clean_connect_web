@@ -79,14 +79,14 @@ export default function WorkerMyJobsPage() {
     <WorkerLayout>
       {/* Header */}
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">My Jobs</h1>
-        <p className="mt-1 text-sm text-gray-500">
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-slate-100">My Jobs</h1>
+        <p className="mt-1 text-sm text-gray-500 dark:text-slate-400">
           Jobs you&apos;ve accepted — track and complete them here.
         </p>
       </div>
 
       {/* Tabs */}
-      <div className="mb-6 flex gap-1 rounded-xl bg-gray-100 p-1 w-fit">
+      <div className="mb-6 flex gap-1 rounded-xl bg-gray-100 p-1 w-fit dark:bg-slate-800">
         {(
           [
             { key: "active", label: "Active", count: activeJobs.length },
@@ -101,15 +101,17 @@ export default function WorkerMyJobsPage() {
             key={key}
             onClick={() => setTab(key)}
             className={`flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-colors ${
-              tab === key
-                ? "bg-white text-gray-900 shadow-sm"
-                : "text-gray-500 hover:text-gray-700"
+                tab === key
+                ? "bg-white text-gray-900 shadow-sm dark:bg-slate-700 dark:text-slate-100"
+                : "text-gray-500 hover:text-gray-700 dark:text-slate-400 dark:hover:text-slate-200"
             }`}
           >
             {label}
             <span
               className={`rounded-full px-2 py-0.5 text-[11px] font-bold ${
-                tab === key ? "bg-emerald-100 text-emerald-700" : "bg-gray-200 text-gray-500"
+                tab === key
+                  ? "bg-emerald-100 text-emerald-700"
+                  : "bg-gray-200 text-gray-500 dark:bg-slate-700 dark:text-slate-300"
               }`}
             >
               {count}
@@ -120,7 +122,7 @@ export default function WorkerMyJobsPage() {
 
       {/* Content */}
       {loading ? (
-        <div className="flex flex-col items-center justify-center py-20 text-gray-400">
+        <div className="flex flex-col items-center justify-center py-20 text-gray-400 dark:text-slate-400">
           <Loader2 size={32} className="animate-spin mb-3" />
           <span className="text-sm">Loading your jobs…</span>
         </div>
@@ -137,13 +139,13 @@ export default function WorkerMyJobsPage() {
         </div>
       ) : displayedJobs.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-20 text-center">
-          <div className="h-16 w-16 rounded-full bg-gray-100 flex items-center justify-center mb-4">
+          <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-gray-100 dark:bg-slate-800">
             <Briefcase size={28} className="text-gray-400" />
           </div>
-          <h2 className="text-lg font-semibold text-gray-700">
+          <h2 className="text-lg font-semibold text-gray-700 dark:text-slate-100">
             {tab === "active" ? "No active jobs" : "No completed jobs yet"}
           </h2>
-          <p className="mt-1 text-sm text-gray-400 max-w-sm">
+          <p className="mt-1 max-w-sm text-sm text-gray-400 dark:text-slate-400">
             {tab === "active"
               ? "Accept jobs from the Available Jobs page to see them here."
               : "Completed jobs will appear here once you finish them."}
@@ -168,7 +170,9 @@ export default function WorkerMyJobsPage() {
               <div
                 key={id}
                 className={`rounded-2xl border bg-white p-5 shadow-sm transition-all hover:shadow-md ${
-                  isDone ? "border-emerald-200" : "border-gray-200"
+                  isDone
+                    ? "border-emerald-200"
+                    : "border-gray-200"
                 }`}
               >
                 {/* Top row: service + status */}
@@ -177,7 +181,7 @@ export default function WorkerMyJobsPage() {
                     <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-100">
                       <Sparkles size={16} className="text-emerald-600" />
                     </div>
-                    <span className="font-semibold text-gray-900 text-sm">
+                    <span className="text-sm font-semibold text-gray-900">
                       {service?.title || job.serviceId || "Cleaning Service"}
                     </span>
                   </div>
@@ -204,7 +208,7 @@ export default function WorkerMyJobsPage() {
                           day: "numeric",
                         })}
                       </span>
-                      <Clock size={15} className="text-gray-400 ml-2" />
+                      <Clock size={15} className="ml-2 text-gray-400" />
                       <span>
                         {new Date(job.startAt).toLocaleTimeString([], {
                           hour: "2-digit",
@@ -225,7 +229,7 @@ export default function WorkerMyJobsPage() {
                     <div className="flex items-start gap-2">
                       <MapPin
                         size={15}
-                        className="text-gray-400 mt-0.5 shrink-0"
+                        className="mt-0.5 shrink-0 text-gray-400"
                       />
                       <span>
                         {typeof address === "object"
