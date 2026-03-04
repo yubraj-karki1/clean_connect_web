@@ -1,8 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import WorkerLayout from "../_components/WorkerLayout";
 import { getWorkerBookingFeed, getServices, acceptJob, getWorkerJobs, completeJob } from "@/lib/api/booking";
+import axios from "@/lib/api/axios";
+import { ToastContainer, toast } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 import {
   MapPin,
   CalendarDays,
@@ -21,7 +24,17 @@ import {
   ClipboardList,
   Clock3,
   Calendar,
+  Bell,
 } from "lucide-react";
+
+type DashboardNotification = {
+  id: string;
+  message: string;
+  customerName: string;
+  customerPhone: string;
+  createdAt: string;
+  read: boolean;
+};
 
 /* Service category emoji mapping */
 const serviceEmojis: Record<string, string> = {
@@ -42,6 +55,7 @@ function getEmoji(title: string) {
 }
 
 export default function WorkerDashboardPage() {
+  const workerReadStorageKey = "worker_notification_read_map_v1";
   const [jobs, setJobs] = useState<any[]>([]);
   const [services, setServices] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -58,6 +72,60 @@ export default function WorkerDashboardPage() {
   const [myBookingsLoading, setMyBookingsLoading] = useState(true);
   const [myBookingsError, setMyBookingsError] = useState("");
   const [completingId, setCompletingId] = useState<string | null>(null);
+  const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const [notificationReadMap, setNotificationReadMap] = useState<Record<string, boolean>>({});
+  const [customerDetailsMap, setCustomerDetailsMap] = useState<
+    Record<string, { name?: string; phone?: string }>
+  >({});
+  const previousJobIdsRef = useRef<Set<string>>(new Set());
+
+  const notifications = useMemo<DashboardNotification[]>(() => {
+    return jobs
+      .map((job) => {
+        const id = String(job._id || job.id || "");
+        if (!id) return null;
+
+        const serviceTitle =
+          job.serviceId && typeof job.serviceId === "object"
+            ? job.serviceId.title
+            : job.serviceId || "Cleaning service";
+        const customer =
+          job.userId && typeof job.userId === "object" ? job.userId : null;
+        const customerId =
+          customer?._id ||
+          customer?.id ||
+          (typeof job.userId === "string" ? job.userId : "");
+        const customerName =
+          customerDetailsMap[customerId || ""]?.name ||
+          customer?.fullName ||
+          customer?.name ||
+          customer?.email ||
+          "Customer";
+        const customerPhone =
+          customerDetailsMap[customerId || ""]?.phone ||
+          customer?.phoneNumber ||
+          customer?.phone ||
+          customer?.mobile ||
+          customer?.contactNumber ||
+          "";
+
+        return {
+          id,
+          message: `New booking request for ${serviceTitle}.`,
+          customerName,
+          customerPhone,
+          createdAt: job.createdAt || job.startAt || new Date().toISOString(),
+          read: !!notificationReadMap[id],
+        };
+      })
+      .filter((n): n is DashboardNotification => n !== null)
+      .sort(
+        (a, b) =>
+          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      );
+  }, [customerDetailsMap, jobs, notificationReadMap]);
+
+  const unreadCount = notifications.filter((n) => !n.read).length;
 
   const normalizeStatus = (status?: string) =>
     (status || "")
@@ -109,7 +177,129 @@ export default function WorkerDashboardPage() {
     fetchJobs();
     fetchServices();
     fetchMyBookings();
+  }, [workerReadStorageKey]);
+
+  useEffect(() => {
+    const currentIds = new Set(
+      jobs.map((job) => String(job._id || job.id || ""))
+    );
+    if (previousJobIdsRef.current.size > 0) {
+      const newJobs = jobs.filter(
+        (job) => !previousJobIdsRef.current.has(String(job._id || job.id || ""))
+      );
+      if (newJobs.length > 0) {
+        const msg = `${newJobs.length} new job${
+          newJobs.length > 1 ? "s" : ""
+        } available`;
+        toast.info(msg);
+      }
+    }
+    previousJobIdsRef.current = currentIds;
+  }, [jobs]);
+
+  useEffect(() => {
+    const pickUserPayload = (payload: any) =>
+      payload?.data?.data ||
+      payload?.data?.user ||
+      payload?.user ||
+      payload?.data ||
+      payload;
+
+    const extractPhone = (source: any) =>
+      source?.phoneNumber ||
+      source?.phone ||
+      source?.mobile ||
+      source?.contactNumber ||
+      "";
+
+    const extractName = (source: any) => {
+      const full =
+        source?.fullName ||
+        source?.name ||
+        source?.username ||
+        source?.email ||
+        "";
+      if (full) return String(full);
+      const combined = [source?.firstName, source?.lastName]
+        .filter((v: unknown) => typeof v === "string" && v.trim())
+        .join(" ")
+        .trim();
+      return combined || "";
+    };
+
+    const needsLookup = jobs
+      .map((job) => {
+        const customerObj = job.userId && typeof job.userId === "object" ? job.userId : null;
+        const customerId =
+          customerObj?._id ||
+          customerObj?.id ||
+          (typeof job.userId === "string" ? job.userId : "");
+        const hasPhone =
+          !!extractPhone(customerObj) || !!customerDetailsMap[customerId || ""]?.phone;
+        return { customerId, hasPhone };
+      })
+      .filter((r) => r.customerId && !r.hasPhone)
+      .map((r) => r.customerId);
+
+    const uniqueIds = Array.from(new Set(needsLookup));
+    if (uniqueIds.length === 0) return;
+
+    let cancelled = false;
+
+    Promise.all(
+      uniqueIds.map(async (id) => {
+        try {
+          const res = await axios.get(`/api/users/${id}`);
+          const user = pickUserPayload(res.data) || {};
+          const phone = extractPhone(user);
+          const name = extractName(user);
+          return { id, name, phone };
+        } catch {
+          return { id, name: "", phone: "" };
+        }
+      })
+    ).then((rows) => {
+      if (cancelled) return;
+      setCustomerDetailsMap((prev) => {
+        const next = { ...prev };
+        rows.forEach((r) => {
+          if (!r.id) return;
+          const current = next[r.id] || {};
+          next[r.id] = {
+            name: current.name || r.name || "",
+            phone: current.phone || r.phone || "",
+          };
+        });
+        return next;
+      });
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [jobs]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      const raw = localStorage.getItem(workerReadStorageKey);
+      if (!raw) return;
+      const parsed = JSON.parse(raw);
+      if (parsed && typeof parsed === "object") {
+        setNotificationReadMap(parsed as Record<string, boolean>);
+      }
+    } catch {}
   }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      localStorage.setItem(
+        workerReadStorageKey,
+        JSON.stringify(notificationReadMap)
+      );
+    } catch {}
+  }, [notificationReadMap, workerReadStorageKey]);
 
   const handleComplete = async (id: string) => {
     setCompletingId(id);
@@ -120,10 +310,11 @@ export default function WorkerDashboardPage() {
           (j._id || j.id) === id ? { ...j, status: "completed" } : j
         )
       );
+      toast.success("Booking marked as completed");
     } catch (err: any) {
-      alert(
-        err?.response?.data?.message || err.message || "Failed to mark as complete"
-      );
+      const msg =
+        err?.response?.data?.message || err.message || "Failed to mark as complete";
+      toast.error(msg);
     } finally {
       setCompletingId(null);
     }
@@ -158,6 +349,7 @@ export default function WorkerDashboardPage() {
     setRefreshing(true);
     await fetchJobs();
     setRefreshing(false);
+    toast.success("Available jobs refreshed");
   };
 
   const handleAccept = async (id: string) => {
@@ -165,14 +357,15 @@ export default function WorkerDashboardPage() {
     try {
       await acceptJob(id);
       setSuccessId(id);
+      toast.success("Job accepted successfully");
       setTimeout(() => {
         setJobs((prev) => prev.filter((j) => (j._id || j.id) !== id));
         setSuccessId(null);
       }, 1200);
     } catch (err: any) {
-      alert(
-        err?.response?.data?.message || err.message || "Failed to accept job"
-      );
+      const msg =
+        err?.response?.data?.message || err.message || "Failed to accept job";
+      toast.error(msg);
     } finally {
       setAcceptingId(null);
     }
@@ -287,6 +480,86 @@ export default function WorkerDashboardPage() {
       </div>
 
       {/* ══════════ MY BOOKINGS TAB ══════════ */}
+      <div className="mb-6 flex justify-end">
+        <div className="relative">
+          <button
+            type="button"
+            onClick={async () => {
+              const opening = !notificationsOpen;
+              setNotificationsOpen(opening);
+              if (opening) await fetchJobs();
+            }}
+            className="inline-flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-2 text-sm font-semibold text-gray-700 shadow-sm transition hover:bg-gray-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
+          >
+            <Bell size={16} />
+            Notifications
+            {unreadCount > 0 && (
+              <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[11px] font-bold text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-200">
+                {unreadCount}
+              </span>
+            )}
+          </button>
+
+          {notificationsOpen && (
+            <div className="absolute right-0 z-20 mt-2 w-[320px] max-w-[90vw] overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-lg dark:border-slate-700 dark:bg-slate-900">
+              <div className="flex items-center justify-between border-b border-gray-100 px-4 py-3 dark:border-slate-800">
+                <span className="text-sm font-semibold text-gray-900 dark:text-slate-100">
+                  Recent notifications
+                </span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const next: Record<string, boolean> = {};
+                    notifications.forEach((n) => {
+                      next[n.id] = true;
+                    });
+                    setNotificationReadMap((prev) => ({ ...prev, ...next }));
+                  }}
+                  className="text-xs font-medium text-emerald-600 hover:underline"
+                >
+                  Mark all read
+                </button>
+              </div>
+
+              <div className="max-h-72 overflow-y-auto p-2">
+                {notifications.length === 0 ? (
+                  <p className="rounded-xl px-3 py-6 text-center text-sm text-gray-500 dark:text-slate-400">
+                    No notifications yet.
+                  </p>
+                ) : (
+                  notifications.map((n) => (
+                    <div
+                      key={n.id}
+                      className={`mb-2 rounded-xl border px-3 py-2 text-sm ${
+                        n.read
+                          ? "border-gray-100 bg-gray-50 text-gray-600 dark:border-slate-800 dark:bg-slate-800/60 dark:text-slate-300"
+                          : "border-emerald-100 bg-emerald-50/60 text-gray-800 dark:border-emerald-900/50 dark:bg-emerald-900/20 dark:text-slate-100"
+                      }`}
+                    >
+                      <p>{n.message}</p>
+                      <p className="mt-1 text-xs text-gray-500 dark:text-slate-400">
+                        Customer: {n.customerName}
+                      </p>
+                      {n.customerPhone && (
+                        <p className="mt-1 text-xs text-gray-500 dark:text-slate-400">
+                          Phone: {n.customerPhone}
+                        </p>
+                      )}
+                      <p className="mt-1 text-[11px] text-gray-400 dark:text-slate-500">
+                        {new Date(n.createdAt).toLocaleTimeString([], {
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })}
+                      </p>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+
       {dashboardTab === "my-bookings" ? (
         <>
           {/* Sub-header */}
@@ -828,6 +1101,7 @@ export default function WorkerDashboardPage() {
       </>
       )}
       </div>
+      <ToastContainer position="top-right" autoClose={3000} />
     </WorkerLayout>
   );
 }

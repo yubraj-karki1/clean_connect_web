@@ -9,6 +9,7 @@ import {
   Calendar,
   Heart,
   User,
+  Bell,
   Gift,
   Search,
   SlidersHorizontal,
@@ -17,7 +18,11 @@ import {
   Sun,
   Moon,
 } from "lucide-react";
-import { getServices } from "@/lib/api/booking";
+import {
+  getCustomerNotifications,
+  getServices,
+  type CustomerNotification,
+} from "@/lib/api/booking";
 import { handleLogout } from "@/lib/actions/auth-action";
 
 /* Emoji mapping for service titles */
@@ -40,7 +45,7 @@ function getEmoji(title: string) {
 
 const featuredCleaners = [
   {
-    name: "Sarah Johnson",
+    name: "Dipen Tamang",
     specialty: "Home & Deep Cleaning",
     price: 35,
     rating: 4.9,
@@ -49,7 +54,7 @@ const featuredCleaners = [
       "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=1200&q=80",
   },
   {
-    name: "Michael Chen",
+    name: "Joshep Tamang",
     specialty: "Office Cleaning Expert",
     price: 40,
     rating: 4.8,
@@ -58,7 +63,7 @@ const featuredCleaners = [
       "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=1200&q=80",
   },
   {
-    name: "Emily Rodriguez",
+    name: "Rabin Tamang",
     specialty: "Carpet & Window Specialist",
     price: 38,
     rating: 4.9,
@@ -67,7 +72,7 @@ const featuredCleaners = [
       "https://images.unsplash.com/photo-1524502397800-2eeaad7c3fe5?auto=format&fit=crop&w=1200&q=80",
   },
   {
-    name: "David Kim",
+    name: "Harka Dai",
     specialty: "Move-in/out Cleaning",
     price: 45,
     rating: 4.7,
@@ -80,6 +85,7 @@ const featuredCleaners = [
 
 export default function DashboardPage() {
   const router = useRouter();
+  const customerReadStorageKey = "customer_notification_read_map_v1";
 
   const [flash, setFlash] = useState<string | null>(null);
   const [name, setName] = useState("Guest");
@@ -91,6 +97,10 @@ export default function DashboardPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [searchTarget, setSearchTarget] = useState<"all" | "services" | "cleaners">("all");
   const [theme, setTheme] = useState<"light" | "dark">("light");
+  const [customerNotifications, setCustomerNotifications] = useState<CustomerNotification[]>([]);
+  const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const [notificationsLoading, setNotificationsLoading] = useState(false);
+  const [notificationReadMap, setNotificationReadMap] = useState<Record<string, boolean>>({});
 
   // Flash message
   useEffect(() => {
@@ -141,13 +151,62 @@ export default function DashboardPage() {
     const nextTheme = saved === "dark" ? "dark" : "light";
     setTheme(nextTheme);
     document.documentElement.classList.toggle("dark", nextTheme === "dark");
+  }, [customerReadStorageKey]);
+
+  const fetchCustomerNotifications = async () => {
+    setNotificationsLoading(true);
+    try {
+      const res = await getCustomerNotifications();
+      setCustomerNotifications(res.data || []);
+    } catch {
+      setCustomerNotifications([]);
+    } finally {
+      setNotificationsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchCustomerNotifications();
   }, []);
+
+  useEffect(() => {
+    const intervalId = window.setInterval(() => {
+      fetchCustomerNotifications();
+    }, 15000);
+    return () => window.clearInterval(intervalId);
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      const raw = localStorage.getItem(customerReadStorageKey);
+      if (!raw) return;
+      const parsed = JSON.parse(raw);
+      if (parsed && typeof parsed === "object") {
+        setNotificationReadMap(parsed as Record<string, boolean>);
+      }
+    } catch {}
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      localStorage.setItem(
+        customerReadStorageKey,
+        JSON.stringify(notificationReadMap)
+      );
+    } catch {}
+  }, [customerReadStorageKey, notificationReadMap]);
 
   const applyTheme = (nextTheme: "light" | "dark") => {
     setTheme(nextTheme);
     localStorage.setItem("theme", nextTheme);
     document.documentElement.classList.toggle("dark", nextTheme === "dark");
   };
+
+  const unreadNotificationCount = customerNotifications.filter(
+    (n) => !notificationReadMap[n.id]
+  ).length;
 
   const toggleFavorite = (cleaner: (typeof featuredCleaners)[0]) => {
     setFavorites((prev) => {
@@ -270,6 +329,86 @@ export default function DashboardPage() {
               >
                 <span className="inline-flex items-center gap-1"><Moon size={14} /> Night</span>
               </button>
+            </div>
+            <div className="relative">
+              <button
+                type="button"
+                onClick={async () => {
+                  const opening = !notificationsOpen;
+                  setNotificationsOpen(opening);
+                  if (opening) await fetchCustomerNotifications();
+                }}
+                className="relative inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
+              >
+                <Bell size={15} />
+                Notifications
+                {unreadNotificationCount > 0 && (
+                  <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[11px] font-bold text-emerald-700 dark:bg-emerald-900/50 dark:text-emerald-200">
+                    {unreadNotificationCount}
+                  </span>
+                )}
+              </button>
+
+              {notificationsOpen && (
+                <div className="absolute right-0 z-50 mt-2 w-[360px] max-w-[90vw] overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl dark:border-slate-700 dark:bg-slate-900">
+                  <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3 dark:border-slate-800">
+                    <span className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+                      Recent notifications
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const next: Record<string, boolean> = {};
+                        customerNotifications.forEach((n) => {
+                          next[n.id] = true;
+                        });
+                        setNotificationReadMap((prev) => ({ ...prev, ...next }));
+                      }}
+                      className="text-xs font-medium text-emerald-600 hover:underline dark:text-emerald-300"
+                    >
+                      Mark all read
+                    </button>
+                  </div>
+
+                  <div className="max-h-80 overflow-y-auto p-2">
+                    {notificationsLoading ? (
+                      <p className="rounded-xl px-3 py-6 text-center text-sm text-slate-500 dark:text-slate-400">
+                        Loading notifications...
+                      </p>
+                    ) : customerNotifications.length === 0 ? (
+                      <p className="rounded-xl px-3 py-6 text-center text-sm text-slate-500 dark:text-slate-400">
+                        No notifications yet.
+                      </p>
+                    ) : (
+                      customerNotifications.map((n) => (
+                        <div
+                          key={n.id}
+                          className={`mb-2 rounded-xl border px-3 py-2 text-sm ${
+                            notificationReadMap[n.id]
+                              ? "border-slate-100 bg-slate-50 text-slate-600 dark:border-slate-800 dark:bg-slate-800/60 dark:text-slate-300"
+                              : "border-emerald-100 bg-emerald-50/60 text-slate-800 dark:border-emerald-900/50 dark:bg-emerald-900/20 dark:text-slate-100"
+                          }`}
+                        >
+                          <p className="font-semibold">{n.title}</p>
+                          <p className="mt-1">{n.message}</p>
+                          <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                            Worker: {n.worker.name}
+                            {n.worker.email ? ` (${n.worker.email})` : ""}
+                          </p>
+                          {n.worker.phone && (
+                            <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                              Phone: {n.worker.phone}
+                            </p>
+                          )}
+                          <p className="mt-1 text-[11px] text-slate-400 dark:text-slate-500">
+                            {new Date(n.createdAt).toLocaleString()}
+                          </p>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
             <button
               type="button"
@@ -485,9 +624,6 @@ export default function DashboardPage() {
                     <h3 className="text-base font-bold text-slate-900 dark:text-slate-100">{c.name}</h3>
                     <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">{c.specialty}</p>
 
-                    <div className="mt-4 rounded-lg bg-slate-50 px-3 py-2 text-sm text-slate-700 dark:bg-slate-800/80 dark:text-slate-200">
-                      <span className="font-semibold text-slate-900 dark:text-slate-100">Rating:</span> {c.rating} ({c.reviews} reviews)
-                    </div>
                   </div>
                 </div>
               </div>

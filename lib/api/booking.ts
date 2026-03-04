@@ -453,3 +453,267 @@ export const getWorkerBookingFeed = async () => {
   if (lastHardError) throw lastHardError;
   return { data: [] };
 };
+
+export type WorkerNotification = {
+  id: string;
+  bookingId: string;
+  type: "new_booking_request";
+  title: string;
+  message: string;
+  createdAt: string;
+  read: boolean;
+  booking: any;
+};
+
+/**
+ * Build worker notifications from real booking feed data.
+ * Until a dedicated notifications endpoint exists, this derives
+ * notification rows from open, unassigned customer bookings.
+ */
+export const getWorkerNotifications = async (): Promise<{ data: WorkerNotification[] }> => {
+  const res = await getWorkerBookingFeed();
+  const rows = normalizeBookings(res?.data || []);
+
+  const notifications = rows
+    .filter((booking) => {
+      const assignedWorkerId = workerIdValue(booking.workerId);
+      return !assignedWorkerId && isOpenStatus(booking.status) && !isClosedStatus(booking.status);
+    })
+    .map((booking, idx) => {
+      const bookingId = String(booking._id || booking.id || `booking-${idx}`);
+      const service =
+        booking.serviceId && typeof booking.serviceId === "object"
+          ? booking.serviceId.title
+          : booking.serviceId;
+
+      const createdAt = booking.createdAt || booking.startAt || new Date().toISOString();
+      const serviceText =
+        typeof service === "string" && service.trim()
+          ? service
+          : "Cleaning service";
+
+      return {
+        id: `booking-open-${bookingId}`,
+        bookingId,
+        type: "new_booking_request" as const,
+        title: "New Booking Request",
+        message: `A customer requested ${serviceText}.`,
+        createdAt,
+        read: false,
+        booking,
+      };
+    })
+    .sort(
+      (a, b) =>
+        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    );
+
+  return { data: notifications };
+};
+
+export type CustomerNotification = {
+  id: string;
+  bookingId: string;
+  type: "worker_assigned";
+  title: string;
+  message: string;
+  createdAt: string;
+  read: boolean;
+  worker: {
+    id: string;
+    name: string;
+    email?: string;
+    phone?: string;
+  };
+  booking: any;
+};
+
+/**
+ * Build customer notifications from real booking rows.
+ * A notification is created when a worker is assigned/accepted.
+ */
+export const getCustomerNotifications = async (): Promise<{ data: CustomerNotification[] }> => {
+  const res = await getMyBookings();
+  const rows = normalizeBookings(res?.data || []);
+  const workerProfileCache = new Map<
+    string,
+    { fullName?: string; email?: string; phone?: string }
+  >();
+
+  const pickUserPayload = (payload: any) =>
+    payload?.data?.data ||
+    payload?.data?.user ||
+    payload?.user ||
+    payload?.data ||
+    payload;
+
+  const acceptedLike = new Set([
+    "accepted",
+    "in_progress",
+    "inprogress",
+    "confirmed",
+    "assigned",
+    "ongoing",
+    "completed",
+  ]);
+
+  const notifications = rows
+    .filter((booking) => {
+      const workerId = workerIdValue(booking.workerId);
+      const status = (booking.status || "")
+        .toLowerCase()
+        .replace(/\s+/g, "_")
+        .replace(/-/g, "_")
+        .trim();
+
+      return !!workerId && (acceptedLike.has(status) || status === "");
+    })
+    .map((booking, idx) => {
+      const bookingId = String(booking._id || booking.id || `booking-${idx}`);
+      const service =
+        booking.serviceId && typeof booking.serviceId === "object"
+          ? booking.serviceId.title
+          : booking.serviceId;
+      const workerCandidates = [
+        booking.worker,
+        booking.cleaner,
+        booking.provider,
+        booking.assignedTo,
+        booking.workerId,
+      ];
+
+      const workerObj = workerCandidates.find(
+        (w) => w && typeof w === "object"
+      ) as
+        | {
+            _id?: string;
+            id?: string;
+            fullName?: string;
+            name?: string;
+            username?: string;
+            firstName?: string;
+            lastName?: string;
+            title?: string;
+            email?: string;
+            phoneNumber?: string;
+            phone?: string;
+            mobile?: string;
+            contactNumber?: string;
+          }
+        | undefined;
+
+      const workerId = String(
+        workerObj?._id ||
+          workerObj?.id ||
+          (typeof booking.workerId === "string" ? booking.workerId : "") ||
+          ""
+      );
+
+      const combinedName =
+        [workerObj?.firstName, workerObj?.lastName]
+          .filter((v) => typeof v === "string" && v.trim())
+          .join(" ")
+          .trim() || "";
+
+      const workerName =
+        workerObj?.fullName ||
+        workerObj?.name ||
+        workerObj?.username ||
+        combinedName ||
+        workerObj?.title ||
+        workerObj?.email ||
+        "Assigned worker";
+
+      const workerEmail = workerObj?.email || undefined;
+      const workerPhone =
+        workerObj?.phoneNumber ||
+        workerObj?.phone ||
+        workerObj?.mobile ||
+        workerObj?.contactNumber ||
+        undefined;
+      const serviceText =
+        typeof service === "string" && service.trim()
+          ? service
+          : "your cleaning service";
+      const createdAt = booking.updatedAt || booking.createdAt || booking.startAt || new Date().toISOString();
+
+      return {
+        id: `customer-worker-assigned-${bookingId}`,
+        bookingId,
+        type: "worker_assigned" as const,
+        title: "Worker Accepted Your Booking",
+        message: `${workerName} accepted ${serviceText}.`,
+        createdAt,
+        read: false,
+        worker: {
+          id: workerId,
+          name: workerName,
+          email: workerEmail,
+          phone: workerPhone,
+        },
+        booking,
+      };
+    })
+    .sort(
+      (a, b) =>
+        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    );
+
+  await Promise.all(
+    notifications.map(async (n) => {
+      const hasFallbackName =
+        !n.worker.name ||
+        n.worker.name.trim().toLowerCase() === "assigned worker";
+      const needsEmail = !n.worker.email || !n.worker.email.trim();
+      const needsPhone = !n.worker.phone || !n.worker.phone.trim();
+      if (!(hasFallbackName || needsEmail || needsPhone) || !n.worker.id) return;
+
+      if (!workerProfileCache.has(n.worker.id)) {
+        try {
+          const profileRes = await axios.get(`/api/users/${n.worker.id}`);
+          const user = pickUserPayload(profileRes.data) || {};
+          const fullName =
+            user?.fullName ||
+            user?.name ||
+            [user?.firstName, user?.lastName]
+              .filter((v: unknown) => typeof v === "string" && v.trim())
+              .join(" ")
+              .trim();
+          const email =
+            typeof user?.email === "string" ? user.email : undefined;
+          const phoneCandidates = [
+            user?.phoneNumber,
+            user?.phone,
+            user?.mobile,
+            user?.contactNumber,
+          ];
+          const phone = phoneCandidates.find(
+            (v: unknown) => typeof v === "string" && v.trim()
+          ) as string | undefined;
+          workerProfileCache.set(n.worker.id, { fullName, email, phone });
+        } catch {
+          workerProfileCache.set(n.worker.id, {});
+        }
+      }
+
+      const profile = workerProfileCache.get(n.worker.id);
+      if (!profile) return;
+      if (profile.fullName && profile.fullName.trim()) {
+        n.worker.name = profile.fullName.trim();
+      } else if (profile.email && profile.email.trim()) {
+        n.worker.name = profile.email.trim();
+      }
+      if (!n.worker.email && profile.email && profile.email.trim()) {
+        n.worker.email = profile.email.trim();
+      }
+      if (!n.worker.phone && profile.phone && profile.phone.trim()) {
+        n.worker.phone = profile.phone.trim();
+      }
+      if (n.message.includes("Assigned worker accepted")) {
+        n.message = n.message.replace("Assigned worker", n.worker.name);
+      }
+    })
+  );
+
+  return { data: notifications };
+};

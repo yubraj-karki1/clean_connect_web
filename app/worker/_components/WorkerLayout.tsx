@@ -4,7 +4,7 @@ import React, { ReactNode, useEffect, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
-import { Briefcase, LogOut, Moon, Search, Sun } from "lucide-react";
+import { Bell, Briefcase, LogOut, Moon, Search, Sun } from "lucide-react";
 import { handleLogout } from "@/lib/actions/auth-action";
 import LogoutConfirmModal from "@/app/_components/LogoutConfirmModal";
 
@@ -15,6 +15,7 @@ interface WorkerLayoutProps {
 const navItems = [
   { href: "/worker/dashboard", label: "Available Jobs", icon: Search },
   { href: "/worker/my-jobs", label: "My Jobs", icon: Briefcase },
+  { href: "/worker/notifications", label: "Notifications", icon: Bell },
 ];
 
 export default function WorkerLayout({ children }: WorkerLayoutProps) {
