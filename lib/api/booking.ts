@@ -549,24 +549,76 @@ export const getCustomerNotifications = async (): Promise<{ data: CustomerNotifi
 
   const acceptedLike = new Set([
     "accepted",
+    "accepted_by_worker",
+    "worker_accepted",
     "in_progress",
     "inprogress",
     "confirmed",
     "assigned",
+    "worker_assigned",
+    "assigned_to_worker",
     "ongoing",
     "completed",
   ]);
 
+  const hasAssignedWorker = (booking: any) => {
+    const normalizedWorkerId = workerIdValue(booking.workerId);
+    if (normalizedWorkerId) return true;
+
+    const candidates = [
+      booking.worker,
+      booking.cleaner,
+      booking.provider,
+      booking.assignedTo,
+      booking.workerId,
+    ];
+
+    return candidates.some((candidate) => {
+      if (!candidate) return false;
+      if (typeof candidate === "string") return !!workerIdValue(candidate);
+      if (typeof candidate !== "object") return false;
+      const c = candidate as Record<string, unknown>;
+      return !!(
+        c._id ||
+        c.id ||
+        c.fullName ||
+        c.name ||
+        c.username ||
+        c.firstName ||
+        c.lastName ||
+        c.title ||
+        c.email ||
+        c.phoneNumber ||
+        c.phone ||
+        c.mobile ||
+        c.contactNumber
+      );
+    });
+  };
+
   const notifications = rows
     .filter((booking) => {
-      const workerId = workerIdValue(booking.workerId);
       const status = (booking.status || "")
         .toLowerCase()
         .replace(/\s+/g, "_")
         .replace(/-/g, "_")
         .trim();
+      const assigned = hasAssignedWorker(booking);
+      const assignedLikeStatus =
+        acceptedLike.has(status) ||
+        status.includes("accept") ||
+        status.includes("assign") ||
+        status.includes("confirm") ||
+        status.includes("progress") ||
+        status.includes("ongoing") ||
+        status.includes("complete");
+      const cancelledLikeStatus =
+        status.includes("cancel") ||
+        status.includes("reject") ||
+        status.includes("fail") ||
+        status.includes("expire");
 
-      return !!workerId && (acceptedLike.has(status) || status === "");
+      return assigned && !cancelledLikeStatus && (assignedLikeStatus || status === "");
     })
     .map((booking, idx) => {
       const bookingId = String(booking._id || booking.id || `booking-${idx}`);
