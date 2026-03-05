@@ -2,14 +2,7 @@
 import React, { useEffect, useState } from "react";
 import AdminLayout from "../../AdminLayout";
 import { useParams } from "next/navigation";
-
-function getCookie(name: string) {
-  if (typeof document === "undefined") return null;
-  const value = `; ${document.cookie}`;
-  const parts = value.split(`; ${name}=`);
-  if (parts.length === 2) return parts.pop()?.split(';').shift() || null;
-  return null;
-}
+import { getAdminUserById, updateAdminUser } from "@/lib/api/admin";
 
 interface User {
   _id: string;
@@ -33,25 +26,16 @@ export default function UserEditPage() {
       setLoading(true);
       setError(null);
       try {
-        const token = getCookie("auth_token") || getCookie("token");
-        const res = await fetch(`http://localhost:5000/api/admin/users/${id}`, {
-          credentials: "include",
-          headers: {
-            "Content-Type": "application/json",
-            "Authorization": token ? `Bearer ${token}` : "",
-          },
-          mode: "cors"
-        });
-        if (!res.ok) throw new Error("Failed to fetch user");
-        const data = await res.json();
-        setUser(data.data || null);
+        const data = await getAdminUserById(id);
+        setUser(data);
         setForm({
-          fullName: data.data?.fullName || "",
-          email: data.data?.email || "",
-          role: data.data?.role || "user"
+          fullName: data?.fullName || "",
+          email: data?.email || "",
+          role: data?.role || "user"
         });
-      } catch (err: any) {
-        setError(err.message || "Error fetching user");
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : "Error fetching user";
+        setError(msg);
       } finally {
         setLoading(false);
       }
@@ -69,21 +53,11 @@ export default function UserEditPage() {
     setSaving(true);
     setError(null);
     try {
-      const token = getCookie("auth_token") || getCookie("token");
-      const res = await fetch(`http://localhost:5000/api/admin/users/${id}`, {
-        method: "PUT",
-        credentials: "include",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": token ? `Bearer ${token}` : "",
-        },
-        mode: "cors",
-        body: JSON.stringify(form)
-      });
-      if (!res.ok) throw new Error("Failed to update user");
+      await updateAdminUser(id, form);
       alert("User updated successfully");
-    } catch (err: any) {
-      setError(err.message || "Error updating user");
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Error updating user";
+      setError(msg);
     } finally {
       setSaving(false);
     }
@@ -136,6 +110,7 @@ export default function UserEditPage() {
               >
                 <option value="user">User</option>
                 <option value="admin">Admin</option>
+                <option value="worker">Worker</option>
               </select>
             </div>
             <button

@@ -11,7 +11,7 @@ import { RegisterData } from "@/app/(auth)/schema";
 export type AuthUser = {
   id: string;
   email: string;
-  role: "ADMIN" | "USER";
+  role: "admin" | "user" | "worker";
 };
 
 /* ===================== GET AUTH USER ===================== */
@@ -30,10 +30,12 @@ export const getAuthUser = async (): Promise<AuthUser | null> => {
 
 /* ===================== LOGOUT ===================== */
 export const handleLogout = async () => {
-  const cookieStore = cookies();
+  const cookieStore = await cookies();
 
-  (await cookieStore).set("auth_token", "", { maxAge: 0 });
-  (await cookieStore).set("user_data", "", { maxAge: 0 });
+  cookieStore.set("auth_token", "", { maxAge: 0, path: "/" });
+  cookieStore.set("user_data", "", { maxAge: 0, path: "/" });
+  cookieStore.set("token", "", { maxAge: 0, path: "/" });
+  cookieStore.set("role", "", { maxAge: 0, path: "/" });
 };
 
 export const handleRequestPasswordReset = async (email: string) => {
@@ -70,10 +72,9 @@ export const handleResetPassword = async (token: string, newPassword: string) =>
 export const handleRegister = async (data: RegisterData) => {
   try {
     const response = await apiRegister(data);
-    if (response.token && response.user) {
-      await setAuthToken(response.token);
-      await setUserData(response.user);
-      return { success: true, message: "Registration successful" };
+    // Backend returns { success: true, message, data } — no token on register
+    if (response.success) {
+      return { success: true, message: response.message || "Registration successful" };
     }
     return { success: false, message: response.message || "Registration failed" };
   } catch (error: any) {

@@ -17,10 +17,11 @@ export const registerSchema = z.object({
   password: z.string().min(6, "Password must be at least 6 characters"),
   confirmPassword: z.string().min(1, "Please confirm your password"),
   terms: z.boolean().refine((val) => val === true, "You must accept terms"),
+  role: z.enum(["user", "worker"]),
 })
 .refine((data) => data.password === data.confirmPassword, {
   message: "Passwords don't match",
-  path: ["confirmPassword"], // This sets the error specifically on the confirmPassword field
+  path: ["confirmPassword"],
 });
 
 export type RegisterData = z.infer<typeof registerSchema>;

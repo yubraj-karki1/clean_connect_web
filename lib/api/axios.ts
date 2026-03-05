@@ -1,12 +1,39 @@
 import axios, { AxiosHeaders, type InternalAxiosRequestConfig } from "axios";
 
+// In the browser, use relative URLs so requests go through Next.js rewrites (same origin → no CORS).
+// On the server (SSR / Server Actions), hit the backend directly.
 const BASE_URL =
-  process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:5050";
+  typeof window === "undefined"
+    ? (process.env.BACKEND_URL || "http://localhost:5000")
+    : "";
 
 const axiosInstance = axios.create({
   baseURL: BASE_URL,
   withCredentials: true, // keep true if you use cookies for auth
 });
+
+const readCookieToken = () => {
+  if (typeof document === "undefined") return null;
+  const cookie = document.cookie || "";
+  const parts = cookie
+    .split(";")
+    .map((part) => part.trim())
+    .filter(Boolean);
+
+  const tokenEntry = parts.find(
+    (entry) => entry.startsWith("auth_token=") || entry.startsWith("token=")
+  );
+  if (!tokenEntry) return null;
+
+  const raw = tokenEntry.split("=").slice(1).join("=");
+  if (!raw) return null;
+
+  try {
+    return decodeURIComponent(raw);
+  } catch {
+    return raw;
+  }
+};
 
 axiosInstance.interceptors.request.use((config: InternalAxiosRequestConfig) => {
   // Ensure headers is always an AxiosHeaders instance
@@ -27,8 +54,10 @@ axiosInstance.interceptors.request.use((config: InternalAxiosRequestConfig) => {
 
   // OPTIONAL: if your backend uses Bearer token from localStorage
   // (skip this if you use httpOnly cookies only)
-  const token =
+  const storageToken =
     typeof window !== "undefined" ? localStorage.getItem("token") : null;
+  const cookieToken = readCookieToken();
+  const token = storageToken || cookieToken;
 
   if (token) {
     headers.set("Authorization", `Bearer ${token}`);

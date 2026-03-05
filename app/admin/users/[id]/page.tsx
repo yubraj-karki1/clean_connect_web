@@ -2,14 +2,7 @@
 import React, { useEffect, useState } from "react";
 import AdminLayout from "../AdminLayout";
 import { useParams } from "next/navigation";
-
-function getCookie(name: string) {
-  if (typeof document === "undefined") return null;
-  const value = `; ${document.cookie}`;
-  const parts = value.split(`; ${name}=`);
-  if (parts.length === 2) return parts.pop()?.split(';').shift() || null;
-  return null;
-}
+import { getAdminUserById } from "@/lib/api/admin";
 
 interface User {
   _id: string;
@@ -33,28 +26,17 @@ export default function UserDetailPage() {
       setError(null);
       setBackendError(null);
       try {
-        const token = getCookie("auth_token") || getCookie("token");
-        const res = await fetch(`http://localhost:5000/api/admin/users/${id}`, {
-          credentials: "include",
-          headers: {
-            "Content-Type": "application/json",
-            "Authorization": token ? `Bearer ${token}` : "",
-          },
-          mode: "cors"
-        });
-        if (!res.ok) {
-          let msg = "Failed to fetch user";
+        const data = await getAdminUserById(id);
+        setUser(data);
+      } catch (err: unknown) {
+        if (typeof err === "object" && err && "response" in err) {
           try {
-            const errData = await res.json();
-            msg = errData.message || msg;
-            setBackendError(JSON.stringify(errData, null, 2));
+            const e = err as { response?: { data?: unknown }; message?: string };
+            setBackendError(JSON.stringify(e.response?.data, null, 2));
           } catch {}
-          throw new Error(msg);
         }
-        const data = await res.json();
-        setUser(data.data || null);
-      } catch (err: any) {
-        setError(err.message || "Error fetching user");
+        const msg = err instanceof Error ? err.message : "Error fetching user";
+        setError(msg);
       } finally {
         setLoading(false);
       }

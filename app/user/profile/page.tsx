@@ -12,6 +12,11 @@ type FormState = {
 };
 
 export default function UserProfilePage() {
+	const getClientToken = () => {
+		if (typeof window === "undefined") return null;
+		return localStorage.getItem("token");
+	};
+
 	const [user, setUser] = useState<any>(null);
 	const [form, setForm] = useState<FormState>({
 		name: "",
@@ -35,7 +40,11 @@ export default function UserProfilePage() {
 					}
 				} catch {}
 				const id = userId || "6980180aaef2c2b8518013a5";
-				const res = await fetch(`/api/users/${id}`);
+				const token = getClientToken();
+				const res = await fetch(`/api/users/${id}`, {
+					credentials: "include",
+					headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+				});
 				const data = await res.json();
 				if (!data.success) throw new Error(data.message || "No user");
 				setUser(data.data);
@@ -73,8 +82,11 @@ export default function UserProfilePage() {
 		}
 		try {
 			const id = user?._id || user?.id || "me";
+			const token = getClientToken();
 			const res = await fetch(`/api/auth/${id}`, {
 				method: "PUT",
+				credentials: "include",
+				headers: token ? { Authorization: `Bearer ${token}` } : undefined,
 				body: formData,
 			});
 			if (!res.ok) throw new Error("Update failed");

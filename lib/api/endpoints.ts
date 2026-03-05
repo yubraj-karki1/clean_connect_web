@@ -16,5 +16,20 @@ export const API = {
       UPDATE: (id: string) => `/api/admin/users/${id}`, // PUT/PATCH
       DELETE: (id: string) => `/api/admin/users/${id}`, // DELETE
     },
+    BOOKINGS: {
+      LIST: "/api/bookings",
+      BY_ID: (id: string) => `/api/bookings/${id}`,
+      STATUS: (id: string) => `/api/bookings/${id}/status`,
+      ACCEPT: (id: string) => `/api/bookings/${id}/accept`,
+      COMPLETE: (id: string) => `/api/bookings/${id}/complete`,
+      CANCEL: (id: string) => `/api/bookings/${id}/cancel`,
+    },
+  },
+
+  WORKER: {
+    AVAILABLE_JOBS: "/api/bookings/available",   // GET — open bookings
+    MY_JOBS: "/api/bookings/worker/me",          // GET — worker's accepted jobs
+    ACCEPT: (id: string) => `/api/bookings/${id}/accept`,   // PATCH
+    COMPLETE: (id: string) => `/api/bookings/${id}/complete`, // PATCH
   },
 } as const;
