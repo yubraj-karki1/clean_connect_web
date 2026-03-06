@@ -18,6 +18,7 @@ import {
   Sun,
   Moon,
 } from "lucide-react";
+import LogoutConfirmModal from "@/app/_components/LogoutConfirmModal";
 import {
   getCustomerNotifications,
   getServices,
@@ -101,6 +102,7 @@ export default function DashboardPage() {
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [notificationsLoading, setNotificationsLoading] = useState(false);
   const [notificationReadMap, setNotificationReadMap] = useState<Record<string, boolean>>({});
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
 
   // Flash message
   useEffect(() => {
@@ -247,7 +249,7 @@ export default function DashboardPage() {
     document.cookie = "role=; Max-Age=0; path=/";
     localStorage.removeItem("token");
     localStorage.removeItem("user");
-    window.location.href = "/login";
+    window.location.replace("/login");
   };
 
   return (
@@ -420,7 +422,7 @@ export default function DashboardPage() {
             <button
               type="button"
               disabled={loggingOut}
-              onClick={onLogout}
+              onClick={() => setShowLogoutModal(true)}
               className="flex items-center gap-2 rounded-full border border-rose-500 px-4 py-2 text-sm font-semibold text-rose-600 transition hover:bg-rose-50 disabled:opacity-60 dark:border-rose-700 dark:text-rose-300 dark:hover:bg-rose-900/20"
             >
               <LogOut size={14} />
@@ -643,6 +645,16 @@ export default function DashboardPage() {
           </div>
         </div>
       </footer>
+
+      <LogoutConfirmModal
+        open={showLogoutModal}
+        onConfirm={async () => {
+          setShowLogoutModal(false);
+          await onLogout();
+        }}
+        onCancel={() => setShowLogoutModal(false)}
+        loading={loggingOut}
+      />
     </main>
   );
 }

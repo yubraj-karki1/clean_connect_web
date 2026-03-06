@@ -5,6 +5,7 @@ const sora = Sora({ subsets: ["latin"], weight: ["600", "700", "800"] });
 const jakarta = Plus_Jakarta_Sans({ subsets: ["latin"], weight: ["400", "500", "600"] });
 
 export default function HomePage() {
+  
   return (
     <main className={`${jakarta.className} relative min-h-screen overflow-hidden bg-[#05070d] text-slate-100`}>
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_15%_20%,rgba(20,184,166,0.20),transparent_42%),radial-gradient(circle_at_85%_10%,rgba(56,189,248,0.16),transparent_45%),radial-gradient(circle_at_50%_100%,rgba(34,211,238,0.14),transparent_46%)]" />

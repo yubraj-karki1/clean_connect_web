@@ -29,23 +29,98 @@ export const register = async (registerData: RegisterData) => {
 }
 
 export const login = async (loginData: LoginData) => {
-    try {
-        const response = await axios.post(API.AUTH.LOGIN, loginData)
-        return response.data
-    } catch (error: Error | any) {
-        throw new Error(error.response?.data?.message || error.message || 'Login failed')
+    const endpoints = [
+        API.AUTH.LOGIN,
+        "/api/auth/signin",
+        "/api/login",
+    ];
+
+    const payloads = [
+        { email: loginData.email, password: loginData.password },
+        { emailOrPhone: loginData.email, password: loginData.password },
+        { identifier: loginData.email, password: loginData.password },
+        { username: loginData.email, password: loginData.password },
+    ];
+
+    let lastError: Error | any = null;
+
+    for (const endpoint of endpoints) {
+        for (const payload of payloads) {
+            try {
+                const response = await axios.post(endpoint, payload);
+                return response.data;
+            } catch (error: Error | any) {
+                const status = error?.response?.status;
+                const message =
+                    error?.response?.data?.message ||
+                    error?.response?.data?.error ||
+                    error?.response?.data?.detail ||
+                    error?.message;
+
+                lastError = new Error(message || "Login failed");
+
+                // Credentials/auth issues should stop immediately.
+                if (status === 401 || status === 403) {
+                    throw lastError;
+                }
+
+                if (
+                    typeof message === "string" &&
+                    /(invalid|incorrect|unauthorized|wrong password|user not found|credentials)/i.test(message)
+                ) {
+                    throw lastError;
+                }
+
+                // Try next variant on common route/payload mismatch statuses.
+                if (status === 400 || status === 404 || status === 405 || status === 422 || status === 500) {
+                    continue;
+                }
+            }
+        }
     }
+
+    throw lastError || new Error("Login failed");
 }
 
 
 
 export const requestPasswordReset = async (email: string) => {
-    try {
-        const response = await axios.post(API.AUTH.REQUEST_PASSWORD_RESET, { email });
-        return response.data;
-    } catch (error: Error | any) {
-        throw new Error(error.response?.data?.message || error.message || 'Request password reset failed');
+    const endpoints = [
+        API.AUTH.REQUEST_PASSWORD_RESET,
+        "/api/auth/forgot-password",
+        "/api/auth/forget-password",
+        "/api/auth/request-reset",
+        "/api/auth/password-reset-request",
+        "/api/auth/forgot",
+    ];
+
+    let lastError: Error | any = null;
+
+    for (const endpoint of endpoints) {
+        try {
+            const response = await axios.post(endpoint, { email });
+            return response.data;
+        } catch (error: Error | any) {
+            const status = error?.response?.status;
+            const message =
+                error?.response?.data?.message ||
+                error?.response?.data?.error ||
+                error?.response?.data?.detail ||
+                error?.message ||
+                "Request password reset failed";
+
+            lastError = new Error(message);
+
+            // Try next route only when the route itself is likely wrong.
+            if (status === 404 || status === 405) {
+                continue;
+            }
+
+            throw lastError;
+        }
     }
+
+    throw lastError || new Error("Request password reset failed");
 };
 
 export const resetPassword = async (token: string, newPassword: string) => {

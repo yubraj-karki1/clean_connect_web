@@ -12,6 +12,17 @@ const axiosInstance = axios.create({
   withCredentials: true, // keep true if you use cookies for auth
 });
 
+const PUBLIC_AUTH_ENDPOINTS = [
+  "/api/auth/login",
+  "/api/auth/register",
+  "/api/auth/request-password-reset",
+  "/api/auth/forgot-password",
+  "/api/auth/forget-password",
+  "/api/auth/request-reset",
+  "/api/auth/password-reset-request",
+  "/api/auth/forgot",
+];
+
 const readCookieToken = () => {
   if (typeof document === "undefined") return null;
   const cookie = document.cookie || "";
@@ -59,7 +70,12 @@ axiosInstance.interceptors.request.use((config: InternalAxiosRequestConfig) => {
   const cookieToken = readCookieToken();
   const token = storageToken || cookieToken;
 
-  if (token) {
+  const requestUrl = config.url || "";
+  const isPublicAuthRequest = PUBLIC_AUTH_ENDPOINTS.some((endpoint) =>
+    requestUrl.includes(endpoint)
+  );
+
+  if (token && !isPublicAuthRequest) {
     headers.set("Authorization", `Bearer ${token}`);
   }
 

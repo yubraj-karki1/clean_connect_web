@@ -27,11 +27,11 @@ export default function Page() {
 
   const onSubmit = async (data: RequestPasswordResetDTO) => {
     try {
-      const response = await requestPasswordReset(data.email);
-      if (response.success) toast.success(response.message || "Reset link sent!");
-      else toast.error(response.message || "Failed to send reset link.");
-    } catch (error: any) {
-      toast.error(error?.message || "Something went wrong.");
+      await requestPasswordReset(data.email);
+      toast.success("If an account exists for this email, a reset link has been sent.");
+    } catch (_error: any) {
+      // Keep a generic success response to avoid account enumeration and mail-config leakage.
+      toast.success("If an account exists for this email, a reset link has been sent.");
     }
   };
 

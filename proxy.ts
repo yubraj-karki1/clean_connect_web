@@ -3,7 +3,8 @@ import { NextRequest, NextResponse } from "next/server";
 export default function proxy(req: NextRequest) {
   const path = req.nextUrl.pathname;
 
-  const token = req.cookies.get("token")?.value; // set on login
+  const token =
+    req.cookies.get("token")?.value || req.cookies.get("auth_token")?.value;
   const role = req.cookies.get("role")?.value;   // set on login (e.g. "admin" | "user" | "worker")
 
   const isAdminRoute = path.startsWith("/admin");

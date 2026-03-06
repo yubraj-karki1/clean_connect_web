@@ -59,7 +59,7 @@ export default function AdminDashboardPage() {
       localStorage.removeItem("user");
     }
 
-    window.location.href = "/login";
+    window.location.replace("/login");
   };
 
   const fetchData = async (silent = false) => {
